@@ -12,6 +12,7 @@ class HMPCv2_Router {
         add_filter('query_vars', array(__CLASS__, 'register_query_vars'));
         add_action('init', array(__CLASS__, 'register_rewrite_rules'), 5);
         add_action('init', array(__CLASS__, 'register_rewrites'), 5);
+        add_action('parse_request', array(__CLASS__, 'parse_request_lang_prefixed'), 0);
         add_filter('request', array(__CLASS__, 'map_lang_prefixed_request'), 1);
 
         // IMPORTANT: Router behavior must be FRONTEND-only
@@ -301,5 +302,42 @@ class HMPCv2_Router {
 
         setcookie('hmpcv2_lang', $lang, $expire, COOKIEPATH ?: '/', COOKIE_DOMAIN, is_ssl(), true);
         $_COOKIE['hmpcv2_lang'] = $lang;
+    }
+
+    public static function parse_request_lang_prefixed($wp) {
+        if (is_admin()) return;
+        if (empty($wp) || !isset($wp->request)) return;
+
+        $req = trim((string) $wp->request, '/');
+        if ($req === '') return;
+
+        $parts = explode('/', $req);
+        if (count($parts) < 3) return;
+
+        $lang = strtolower((string) $parts[0]);
+        $enabled = HMPCv2_Langs::enabled_langs();
+        if (!in_array($lang, $enabled, true)) return;
+
+        if ((string) $parts[1] !== 'urun') return;
+
+        $slug = implode('/', array_slice($parts, 2));
+        $slug = trim($slug, '/');
+        if ($slug === '') return;
+
+        $unpref = home_url('/urun/' . $slug . '/');
+        $post_id = (int) url_to_postid($unpref);
+        if ($post_id < 1) return;
+
+        $wp->query_vars = array(
+            'post_type' => 'product',
+            'p' => $post_id,
+            self::QV_LANG => $lang,
+        );
+
+        $wp->matched_rule  = 'hmpcv2_parse_request';
+        $wp->matched_query = 'post_type=product&p=' . $post_id;
+
+        set_query_var(self::QV_LANG, $lang);
+        $_GET[self::QV_LANG] = $lang;
     }
 }
