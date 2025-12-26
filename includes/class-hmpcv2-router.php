@@ -5,10 +5,14 @@ if (!defined('ABSPATH')) exit;
 class HMPCv2_Router {
     const QUERY_VAR_LANG = 'hmpcv2_lang';
     const QUERY_VAR_PATH = 'hmpcv2_path';
+    const QV_LANG = 'hmpcv2_lang';
+    const QV_PATH = 'hmpcv2_path';
 
     public static function init() {
-        add_filter('query_vars', array(__CLASS__, 'add_query_vars'));
+        add_filter('query_vars', array(__CLASS__, 'register_query_vars'));
         add_action('init', array(__CLASS__, 'register_rewrite_rules'), 5);
+        add_action('init', array(__CLASS__, 'register_rewrites'), 5);
+        add_filter('request', array(__CLASS__, 'map_lang_prefixed_request'), 1);
 
         // IMPORTANT: Router behavior must be FRONTEND-only
         if (is_admin()) {
@@ -23,15 +27,19 @@ class HMPCv2_Router {
     }
 
     public static function add_query_vars($vars) {
-        $vars[] = self::QUERY_VAR_LANG;
-        $vars[] = self::QUERY_VAR_PATH;
+        return self::register_query_vars($vars);
+    }
+
+    public static function register_query_vars($vars) {
+        $vars[] = self::QV_LANG;
+        $vars[] = self::QV_PATH;
         $vars[] = 'hmpc_path';
         return $vars;
     }
 
     public static function register_rewrite_rules() {
-        add_rewrite_tag('%' . self::QUERY_VAR_LANG . '%', '([^/]+)');
-        add_rewrite_tag('%' . self::QUERY_VAR_PATH . '%', '(.+)');
+        add_rewrite_tag('%' . self::QV_LANG . '%', '([^/]+)');
+        add_rewrite_tag('%' . self::QV_PATH . '%', '(.+)');
 
         $default = HMPCv2_Langs::get_default();
         $prefix_default = HMPCv2_Options::get('prefix_default_lang', false);
@@ -41,16 +49,33 @@ class HMPCv2_Router {
                 continue;
             }
 
-            add_rewrite_rule('^' . $code . '/?$', 'index.php?' . self::QUERY_VAR_LANG . '=' . $code, 'top');
-            add_rewrite_rule('^' . $code . '/(.+)?$', 'index.php?' . self::QUERY_VAR_LANG . '=' . $code . '&' . self::QUERY_VAR_PATH . '=$matches[1]', 'top');
+            add_rewrite_rule('^' . $code . '/?$', 'index.php?' . self::QV_LANG . '=' . $code, 'top');
+            add_rewrite_rule('^' . $code . '/(.+)?$', 'index.php?' . self::QV_LANG . '=' . $code . '&' . self::QV_PATH . '=$matches[1]', 'top');
         }
+    }
+
+    public static function register_rewrites() {
+        $langs = HMPCv2_Langs::enabled_langs();
+        if (!is_array($langs) || empty($langs)) return;
+
+        $lang_regex = implode('|', array_map('preg_quote', $langs));
+
+        add_rewrite_tag('%' . self::QV_LANG . '%', '(' . $lang_regex . ')');
+        add_rewrite_tag('%' . self::QV_PATH . '%', '(.+)');
+
+        // Catch-all prefixed route: /en/... , /de/... , /fr/...
+        add_rewrite_rule(
+            '^(' . $lang_regex . ')/(.*)?$',
+            'index.php?' . self::QV_LANG . '=$matches[1]&' . self::QV_PATH . '=$matches[2]',
+            'top'
+        );
     }
 
     public static function parse_request_lang($wp) {
         if (is_admin()) return $wp;
 
-        $lang = isset($wp->query_vars[self::QUERY_VAR_LANG]) ? $wp->query_vars[self::QUERY_VAR_LANG] : '';
-        $path = isset($wp->query_vars[self::QUERY_VAR_PATH]) ? $wp->query_vars[self::QUERY_VAR_PATH] : '';
+        $lang = isset($wp->query_vars[self::QV_LANG]) ? $wp->query_vars[self::QV_LANG] : '';
+        $path = isset($wp->query_vars[self::QV_PATH]) ? $wp->query_vars[self::QV_PATH] : '';
 
         if (!$lang) {
             list($lang, $path) = self::detect_from_request();
@@ -109,7 +134,7 @@ class HMPCv2_Router {
         }
 
         // 2) Query var
-        $qv = get_query_var(self::QUERY_VAR_LANG);
+        $qv = get_query_var(self::QV_LANG);
         if (is_string($qv) && $qv !== '') {
             $qv = strtolower($qv);
             if (in_array($qv, $enabled, true)) return $qv;
@@ -122,6 +147,44 @@ class HMPCv2_Router {
         }
 
         return $default;
+    }
+
+    public static function map_lang_prefixed_request($query_vars) {
+        if (empty($query_vars[self::QV_LANG]) || !isset($query_vars[self::QV_PATH])) {
+            return $query_vars;
+        }
+
+        $lang = strtolower((string) $query_vars[self::QV_LANG]);
+        $path = (string) $query_vars[self::QV_PATH];
+        $path = trim($path, '/');
+
+        // Guard: language must be enabled
+        $enabled = HMPCv2_Langs::enabled_langs();
+        if (!in_array($lang, $enabled, true)) {
+            return $query_vars;
+        }
+
+        // Resolve the original (unprefixed) URL to a post ID
+        $unpref_url = home_url('/' . $path . '/');
+        $post_id = (int) url_to_postid($unpref_url);
+
+        if ($post_id > 0) {
+            $pt = get_post_type($post_id);
+            if (!$pt) $pt = 'any';
+
+            // Force main query to load that object
+            $query_vars = array(
+                'p' => $post_id,
+                'post_type' => $pt,
+                self::QV_LANG => $lang,
+                self::QV_PATH => $path,
+            );
+
+            return $query_vars;
+        }
+
+        // If it's not a post, let WP handle (could be taxonomy, search, etc.)
+        return $query_vars;
     }
 
     public static function prefix_default_lang() {
