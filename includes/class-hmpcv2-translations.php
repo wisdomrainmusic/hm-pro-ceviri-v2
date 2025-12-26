@@ -37,17 +37,13 @@ final class HMPCv2_Translations {
         $lang  = self::get_lang($post->ID);
 
         if (!$lang) {
-            // Best-effort default for new posts
             $lang = HMPCv2_Router::current_lang();
             if (!in_array($lang, $enabled, true)) $lang = $default;
         }
 
         wp_nonce_field('hmpcv2_translations_save', 'hmpcv2_translations_nonce');
 
-        echo '<p style="margin-top:0;">Manual mapping (Wix-style): group related pages/posts across languages.</p>';
-
-        echo '<p><strong>Group ID</strong><br />';
-        echo '<input type="text" style="width:100%;" name="hmpcv2_group" value="' . esc_attr($group) . '" placeholder="(auto)"/></p>';
+        echo '<p style="margin-top:0;">Wix-style: link equivalents per language. No IDs — search & select.</p>';
 
         echo '<p><strong>This content language</strong><br />';
         echo '<select style="width:100%;" name="hmpcv2_lang">';
@@ -56,22 +52,46 @@ final class HMPCv2_Translations {
         }
         echo '</select></p>';
 
-        echo '<hr style="margin:10px 0;">';
-        echo '<p style="margin:0 0 6px;"><strong>Linked Post IDs</strong></p>';
-        echo '<p style="margin:0 0 8px; font-size:12px; color:#666;">Enter the post/page ID for each language. Saving will sync them into the same group.</p>';
+        // Ensure group exists or will be created on save
+        echo '<input type="hidden" name="hmpcv2_group" value="' . esc_attr($group) . '" />';
 
-        $current_group = self::get_group($post->ID);
-        $existing_map = $current_group ? self::get_group_map($current_group, $enabled) : array();
+        $existing_map = $group ? self::get_group_map($group, $enabled) : array();
+
+        echo '<hr style="margin:10px 0;">';
+        echo '<p style="margin:0 0 8px;"><strong>Linked translations</strong></p>';
 
         foreach ($enabled as $code) {
-            $val = isset($existing_map[$code]) ? (int)$existing_map[$code] : 0;
-            echo '<p style="margin:0 0 8px;">';
-            echo '<label style="display:block; font-size:12px; margin-bottom:2px;">' . esc_html(strtoupper($code)) . ' Post ID</label>';
-            echo '<input type="number" min="1" style="width:100%;" name="hmpcv2_linked[' . esc_attr($code) . ']" value="' . esc_attr($val ?: '') . '" placeholder="e.g. 123" />';
-            echo '</p>';
+            $pid = isset($existing_map[$code]) ? (int)$existing_map[$code] : 0;
+            $title = $pid ? get_the_title($pid) : '';
+            $label = strtoupper($code);
+
+            echo '<div style="margin:0 0 10px;">';
+            echo '<label style="display:block; font-size:12px; margin-bottom:3px;">' . esc_html($label) . '</label>';
+
+            echo '<input type="text"
+            class="hmpcv2-post-search"
+            data-lang="' . esc_attr($code) . '"
+            placeholder="Search and select…"
+            style="width:100%;"
+            value="' . esc_attr($title ? ($title . ' (#' . $pid . ')') : '') . '" />';
+
+            echo '<input type="hidden" name="hmpcv2_linked[' . esc_attr($code) . ']" value="' . esc_attr($pid ?: '') . '" />';
+
+            if ($pid) {
+                $edit = get_edit_post_link($pid, '');
+                if ($edit) {
+                    echo '<div style="margin-top:4px; font-size:12px;">';
+                    echo '<a href="' . esc_url($edit) . '">Edit</a>';
+                    echo '</div>';
+                }
+            } else {
+                echo '<div style="margin-top:4px; font-size:12px; color:#666;">Not linked</div>';
+            }
+
+            echo '</div>';
         }
 
-        echo '<p style="margin:8px 0 0; font-size:12px; color:#666;">Tip: If Group ID is empty, it will be generated on save.</p>';
+        echo '<p style="margin:8px 0 0; font-size:12px; color:#666;">Save updates links for the whole group.</p>';
     }
 
     public static function save_metabox($post_id, $post) {
@@ -106,7 +126,7 @@ final class HMPCv2_Translations {
         $linked = isset($_POST['hmpcv2_linked']) && is_array($_POST['hmpcv2_linked']) ? $_POST['hmpcv2_linked'] : array();
 
         // Ensure current post is in the mapping too (prefer explicit if user typed it)
-        $linked[$lang] = (int)$post_id;
+        $linked[$lang] = (int)$post_id; // Always force current post into its own language slot
 
         foreach ($enabled as $code) {
             $pid = isset($linked[$code]) ? (int)$linked[$code] : 0;
