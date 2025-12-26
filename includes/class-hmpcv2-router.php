@@ -68,6 +68,14 @@ class HMPCv2_Router {
         }
     }
 
+    public static function current_lang() {
+        return HMPCv2_Langs::get_current_language();
+    }
+
+    public static function prefix_default_lang() {
+        return (bool) HMPCv2_Options::get('prefix_default_lang', false);
+    }
+
     protected static function detect_from_request() {
         $request_uri = isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '';
         $request_uri = strtok($request_uri, '?');

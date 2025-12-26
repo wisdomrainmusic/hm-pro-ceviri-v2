@@ -15,6 +15,10 @@ define('HMPCV2_URL', plugin_dir_url(__FILE__));
 require_once HMPCV2_PATH . 'includes/class-hmpcv2-options.php';
 require_once HMPCV2_PATH . 'includes/class-hmpcv2-langs.php';
 require_once HMPCV2_PATH . 'includes/class-hmpcv2-router.php';
+
+require_once HMPCV2_PATH . 'includes/class-hmpcv2-translations.php';
+require_once HMPCV2_PATH . 'includes/class-hmpcv2-resolver.php';
+
 require_once HMPCV2_PATH . 'includes/class-hmpcv2-admin.php';
 require_once HMPCV2_PATH . 'includes/class-hmpcv2-switcher.php';
 
@@ -39,8 +43,10 @@ final class HMPCv2_Plugin {
         HMPCv2_Router::init();
         HMPCv2_Switcher::init();
 
+        // Admin
         if (is_admin()) {
             HMPCv2_Admin::init();
+            HMPCv2_Translations::init_admin();
         }
     }
 
