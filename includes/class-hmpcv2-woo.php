@@ -162,7 +162,7 @@ final class HMPCv2_Woo {
 	// ---------- Frontend ----------
 	private static function is_frontend_product_context($post_id) {
 		if (is_admin()) return false;
-		if (!is_singular('product')) return false;
+		if (!function_exists('is_product') || !is_product()) return false;
 		return ((int)get_queried_object_id() === (int)$post_id);
 	}
 
@@ -185,7 +185,7 @@ final class HMPCv2_Woo {
 
 	public static function filter_product_content($content) {
 		if (is_admin()) return $content;
-		if (!is_singular('product')) return $content;
+		if (!function_exists('is_product') || !is_product()) return $content;
 
 		$post_id = (int) get_queried_object_id();
 		if ($post_id < 1) return $content;
@@ -199,7 +199,7 @@ final class HMPCv2_Woo {
 
 	public static function filter_product_short_description($short) {
 		if (is_admin()) return $short;
-		if (!is_singular('product')) return $short;
+		if (!function_exists('is_product') || !is_product()) return $short;
 
 		$post_id = (int) get_queried_object_id();
 		if ($post_id < 1) return $short;

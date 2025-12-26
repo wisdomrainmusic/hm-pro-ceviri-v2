@@ -78,8 +78,48 @@ class HMPCv2_Router {
         }
     }
 
+    private static function detect_lang_from_request_uri() {
+        if (empty($_SERVER['REQUEST_URI'])) return '';
+        $uri = (string) $_SERVER['REQUEST_URI'];
+
+        // strip query
+        $path = (string) parse_url($uri, PHP_URL_PATH);
+        $path = '/' . ltrim($path, '/');
+
+        $trim = trim($path, '/');
+        if ($trim === '') return '';
+
+        $parts = explode('/', $trim);
+        $first = strtolower((string)($parts[0] ?? ''));
+
+        $enabled = HMPCv2_Langs::enabled_langs();
+        if ($first && in_array($first, $enabled, true)) return $first;
+
+        return '';
+    }
+
     public static function current_lang() {
-        return HMPCv2_Langs::get_current_language();
+        $default = HMPCv2_Langs::default_lang();
+        $enabled = HMPCv2_Langs::enabled_langs();
+
+        // 1) Query var (best when rewrite works)
+        $qv = get_query_var(self::QUERY_VAR_LANG);
+        if (is_string($qv) && $qv !== '') {
+            $qv = strtolower($qv);
+            if (in_array($qv, $enabled, true)) return $qv;
+        }
+
+        // 2) URL prefix fallback (/en/..., /de/...)
+        $uri_lang = self::detect_lang_from_request_uri();
+        if ($uri_lang !== '') return $uri_lang;
+
+        // 3) cookie (optional)
+        if (!empty($_COOKIE['hmpcv2_lang'])) {
+            $c = strtolower((string) $_COOKIE['hmpcv2_lang']);
+            if (in_array($c, $enabled, true)) return $c;
+        }
+
+        return $default;
     }
 
     public static function prefix_default_lang() {
