@@ -46,6 +46,23 @@ final class HMPCv2_Plugin {
         HMPCv2_Woo::init();
         HMPCv2_Switcher::init();
 
+        if (!is_admin()) {
+            add_filter('redirect_canonical', function($redirect_url, $requested_url) {
+                if (empty($requested_url)) return $redirect_url;
+
+                $path = (string) parse_url($requested_url, PHP_URL_PATH);
+                $path = '/' . ltrim($path, '/');
+                $first = strtolower((string) strtok(trim($path, '/'), '/'));
+
+                $enabled = HMPCv2_Langs::enabled_langs();
+                if ($first && in_array($first, $enabled, true)) {
+                    // keep prefixed URLs as-is
+                    return false;
+                }
+                return $redirect_url;
+            }, 10, 2);
+        }
+
         // Admin
         if (is_admin()) {
             HMPCv2_Admin::init();

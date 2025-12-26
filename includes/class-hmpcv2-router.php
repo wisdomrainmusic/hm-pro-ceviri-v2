@@ -102,18 +102,20 @@ class HMPCv2_Router {
         $default = HMPCv2_Langs::default_lang();
         $enabled = HMPCv2_Langs::enabled_langs();
 
-        // 1) Query var (best when rewrite works)
+        // 1) URL prefix wins (/en/..., /de/...)
+        $uri_lang = self::detect_lang_from_request_uri();
+        if ($uri_lang !== '' && in_array($uri_lang, $enabled, true)) {
+            return $uri_lang;
+        }
+
+        // 2) Query var
         $qv = get_query_var(self::QUERY_VAR_LANG);
         if (is_string($qv) && $qv !== '') {
             $qv = strtolower($qv);
             if (in_array($qv, $enabled, true)) return $qv;
         }
 
-        // 2) URL prefix fallback (/en/..., /de/...)
-        $uri_lang = self::detect_lang_from_request_uri();
-        if ($uri_lang !== '') return $uri_lang;
-
-        // 3) cookie (optional)
+        // 3) Cookie fallback
         if (!empty($_COOKIE['hmpcv2_lang'])) {
             $c = strtolower((string) $_COOKIE['hmpcv2_lang']);
             if (in_array($c, $enabled, true)) return $c;
