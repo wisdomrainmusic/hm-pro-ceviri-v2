@@ -1,0 +1,178 @@
+<?php
+
+if (!defined('ABSPATH')) exit;
+
+class HMPCv2_Router {
+    const QUERY_VAR_LANG = 'hmpcv2_lang';
+    const QUERY_VAR_PATH = 'hmpcv2_path';
+
+    public static function init() {
+        add_action('init', array(__CLASS__, 'register_rewrite_rules'));
+        add_filter('query_vars', array(__CLASS__, 'register_query_vars'));
+        add_action('parse_request', array(__CLASS__, 'maybe_parse_language'));
+        add_action('template_redirect', array(__CLASS__, 'canonical_redirect_default_prefix'), 1);
+        add_action('template_redirect', array(__CLASS__, 'maybe_set_lang_cookie'), 20);
+        add_filter('home_url', array(__CLASS__, 'filter_home_url'), 10, 4);
+    }
+
+    public static function register_query_vars($vars) {
+        $vars[] = self::QUERY_VAR_LANG;
+        $vars[] = self::QUERY_VAR_PATH;
+        return $vars;
+    }
+
+    public static function register_rewrite_rules() {
+        add_rewrite_tag('%' . self::QUERY_VAR_LANG . '%', '([^/]+)');
+        add_rewrite_tag('%' . self::QUERY_VAR_PATH . '%', '(.+)');
+
+        $default = HMPCv2_Langs::get_default();
+        $prefix_default = HMPCv2_Options::get('prefix_default_lang', false);
+
+        foreach (HMPCv2_Langs::get_codes() as $code) {
+            if (!$prefix_default && $code === $default) {
+                continue;
+            }
+
+            add_rewrite_rule('^' . $code . '/?$', 'index.php?' . self::QUERY_VAR_LANG . '=' . $code, 'top');
+            add_rewrite_rule('^' . $code . '/(.+)?$', 'index.php?' . self::QUERY_VAR_LANG . '=' . $code . '&' . self::QUERY_VAR_PATH . '=$matches[1]', 'top');
+        }
+    }
+
+    public static function maybe_parse_language($wp) {
+        $lang = isset($wp->query_vars[self::QUERY_VAR_LANG]) ? $wp->query_vars[self::QUERY_VAR_LANG] : '';
+        $path = isset($wp->query_vars[self::QUERY_VAR_PATH]) ? $wp->query_vars[self::QUERY_VAR_PATH] : '';
+
+        if (!$lang) {
+            list($lang, $path) = self::detect_from_request();
+        }
+
+        $lang = HMPCv2_Langs::sanitize_lang_code($lang, '');
+
+        if (!$lang && HMPCv2_Options::get('cookie_remember', true)) {
+            $cookie_lang = isset($_COOKIE['hmpcv2_lang']) ? $_COOKIE['hmpcv2_lang'] : '';
+            $cookie_lang = HMPCv2_Langs::sanitize_lang_code($cookie_lang, '');
+
+            if ($cookie_lang && HMPCv2_Options::is_language_allowed($cookie_lang, HMPCv2_Options::get('enabled_langs'))) {
+                $lang = $cookie_lang;
+            }
+        }
+
+        if (!$lang) {
+            $lang = HMPCv2_Langs::get_default();
+        }
+
+        HMPCv2_Langs::set_current_language($lang);
+
+        if ($path) {
+            $wp->query_vars['pagename'] = $path;
+        }
+    }
+
+    protected static function detect_from_request() {
+        $request_uri = isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '';
+        $request_uri = strtok($request_uri, '?');
+        $request_uri = ltrim($request_uri, '/');
+
+        if (empty($request_uri)) return array('', '');
+
+        $segments = explode('/', $request_uri);
+        $first = HMPCv2_Options::sanitize_code(array_shift($segments));
+
+        if ($first && HMPCv2_Options::is_language_allowed($first, HMPCv2_Options::get('enabled_langs'))) {
+            return array($first, implode('/', $segments));
+        }
+
+        return array('', $request_uri);
+    }
+
+    public static function get_current_path() {
+        list($lang, $path) = self::detect_from_request();
+        if ($lang && $path === '') return '';
+        return $path;
+    }
+
+    public static function build_url_for_lang($lang_code, $path = '') {
+        $lang_code = HMPCv2_Options::sanitize_code($lang_code);
+        if (!HMPCv2_Options::is_language_allowed($lang_code, HMPCv2_Options::get('enabled_langs'))) {
+            return home_url($path);
+        }
+
+        $path = ltrim($path, '/');
+        $default_lang = HMPCv2_Langs::get_default();
+        $prefix_default = HMPCv2_Options::get('prefix_default_lang', false);
+
+        $prefix = ($lang_code === $default_lang && !$prefix_default) ? '' : $lang_code . '/';
+        $url_path = $prefix . $path;
+
+        return home_url($url_path);
+    }
+
+    public static function filter_home_url($url, $path, $orig_scheme, $blog_id) {
+        $current = HMPCv2_Langs::get_current_language();
+        $path = ltrim($path, '/');
+        $prefix_default = HMPCv2_Options::get('prefix_default_lang', false);
+        $default = HMPCv2_Langs::get_default();
+
+        if (!$current || ($current === $default && !$prefix_default)) {
+            return $url;
+        }
+
+        if (strpos($path, $current . '/') === 0 || $path === $current) {
+            return $url;
+        }
+
+        $prefixed_path = $current . '/' . $path;
+        return home_url($prefixed_path);
+    }
+
+    public static function canonical_redirect_default_prefix() {
+        if (HMPCv2_Options::get('prefix_default_lang', false)) {
+            return;
+        }
+
+        $default = HMPCv2_Langs::get_default();
+        $request_uri = isset($_SERVER['REQUEST_URI']) ? (string) $_SERVER['REQUEST_URI'] : '';
+        $path = trim((string) parse_url($request_uri, PHP_URL_PATH), '/');
+
+        if ($path === '') return;
+
+        $segments = explode('/', $path);
+        $first = HMPCv2_Langs::sanitize_lang_code($segments[0], '');
+
+        if ($first !== $default) return;
+
+        array_shift($segments);
+        $new_path = '/' . implode('/', $segments);
+        if ($new_path === '//') $new_path = '/';
+
+        $query = parse_url($request_uri, PHP_URL_QUERY);
+        $target = $new_path ? $new_path : '/';
+        if ($query) {
+            $target .= '?' . $query;
+        }
+
+        if ($target !== $request_uri) {
+            wp_redirect($target, 301);
+            exit;
+        }
+    }
+
+    public static function maybe_set_lang_cookie() {
+        if (!HMPCv2_Options::get('cookie_remember', true)) {
+            return;
+        }
+
+        $lang = HMPCv2_Langs::get_current_language();
+        if (!$lang) return;
+
+        $days = (int) HMPCv2_Options::get('cookie_days', 30);
+        $days = $days > 0 ? $days : 30;
+        $expire = time() + ($days * DAY_IN_SECONDS);
+
+        $current = isset($_COOKIE['hmpcv2_lang']) ? strtolower((string) $_COOKIE['hmpcv2_lang']) : '';
+        if ($current === $lang) return;
+
+        setcookie('hmpcv2_lang', $lang, $expire, COOKIEPATH ?: '/', COOKIE_DOMAIN, is_ssl(), true);
+        $_COOKIE['hmpcv2_lang'] = $lang;
+    }
+}
