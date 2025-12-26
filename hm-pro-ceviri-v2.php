@@ -20,6 +20,7 @@ require_once HMPCV2_PATH . 'includes/class-hmpcv2-translations.php';
 require_once HMPCV2_PATH . 'includes/class-hmpcv2-resolver.php';
 
 require_once HMPCV2_PATH . 'includes/class-hmpcv2-admin.php';
+require_once HMPCV2_PATH . 'includes/class-hmpcv2-admin-translations.php';
 require_once HMPCV2_PATH . 'includes/class-hmpcv2-switcher.php';
 
 final class HMPCv2_Plugin {
@@ -46,6 +47,7 @@ final class HMPCv2_Plugin {
         // Admin
         if (is_admin()) {
             HMPCv2_Admin::init();
+            HMPCv2_Admin_Translations::init();
             HMPCv2_Translations::init_admin();
         }
     }
