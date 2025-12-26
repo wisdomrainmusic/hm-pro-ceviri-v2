@@ -9,11 +9,12 @@ final class HMPCv2_Woo {
 		// Admin UI for products
 		add_action('add_meta_boxes', array(__CLASS__, 'add_product_metabox'), 30);
 		add_action('save_post_product', array(__CLASS__, 'save_product_metabox'), 10, 2);
-
+		
 		// Frontend overrides
 		add_filter('the_title', array(__CLASS__, 'filter_product_title'), 20, 2);
 		add_filter('the_content', array(__CLASS__, 'filter_product_content'), 20);
 		add_filter('woocommerce_short_description', array(__CLASS__, 'filter_product_short_description'), 20);
+		add_action('wp_footer', array(__CLASS__, 'debug_footer_comment'), 9999);
 
 		// Attribute label/value translation (display layer)
 		add_filter('woocommerce_attribute_label', array(__CLASS__, 'filter_attribute_label'), 20, 3);
@@ -257,5 +258,32 @@ final class HMPCv2_Woo {
 		}
 
 		return $attributes;
+	}
+
+	public static function debug_footer_comment() {
+		if (is_admin()) return;
+		if (!function_exists('is_product') || !is_product()) return;
+
+		$post_id = (int) get_queried_object_id();
+		if ($post_id < 1) return;
+
+		$lang = HMPCv2_Router::current_lang();
+		$default = HMPCv2_Langs::default_lang();
+
+		$en_title = (string) get_post_meta($post_id, '_hmpcv2_en_title', true);
+		$en_short = (string) get_post_meta($post_id, '_hmpcv2_en_short', true);
+		$en_desc  = (string) get_post_meta($post_id, '_hmpcv2_en_desc', true);
+
+		$data = array(
+			'url' => (isset($_SERVER['REQUEST_URI']) ? (string)$_SERVER['REQUEST_URI'] : ''),
+			'current_lang' => $lang,
+			'default_lang' => $default,
+			'queried_id' => $post_id,
+			'en_title_set' => ($en_title !== ''),
+			'en_short_set' => ($en_short !== ''),
+			'en_desc_set' => ($en_desc !== ''),
+		);
+
+		echo "\n<!-- HMPCv2 PRODUCT DEBUG: " . esc_html(wp_json_encode($data)) . " -->\n";
 	}
 }
