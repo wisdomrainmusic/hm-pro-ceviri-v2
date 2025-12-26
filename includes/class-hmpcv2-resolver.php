@@ -80,6 +80,13 @@ final class HMPCv2_Resolver {
 
         // If viewing a singular post/page, try to map to translation in same group
         if (is_singular()) {
+
+            // IMPORTANT: Products are single-post translations (no duplication)
+            if (is_singular('product')) {
+                $source_id = get_queried_object_id();
+                return self::permalink_with_lang($source_id, $target_lang);
+            }
+
             $source_id = get_queried_object_id();
             $target_id = self::resolve_translation_post_id($source_id, $target_lang);
 
@@ -87,7 +94,6 @@ final class HMPCv2_Resolver {
                 return self::permalink_with_lang($target_id, $target_lang);
             }
 
-            // Fallback: stay on same content but just switch prefix (best-effort)
             return self::permalink_with_lang($source_id, $target_lang);
         }
 
