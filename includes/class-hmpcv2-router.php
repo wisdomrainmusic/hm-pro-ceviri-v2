@@ -7,17 +7,25 @@ class HMPCv2_Router {
     const QUERY_VAR_PATH = 'hmpcv2_path';
 
     public static function init() {
-        add_action('init', array(__CLASS__, 'register_rewrite_rules'));
-        add_filter('query_vars', array(__CLASS__, 'register_query_vars'));
-        add_action('parse_request', array(__CLASS__, 'maybe_parse_language'));
+        add_filter('query_vars', array(__CLASS__, 'add_query_vars'));
+        add_action('init', array(__CLASS__, 'register_rewrite_rules'), 5);
+
+        // IMPORTANT: Router behavior must be FRONTEND-only
+        if (is_admin()) {
+            return;
+        }
+
+        add_action('parse_request', array(__CLASS__, 'parse_request_lang'), 1);
         add_action('template_redirect', array(__CLASS__, 'canonical_redirect_default_prefix'), 1);
-        add_action('template_redirect', array(__CLASS__, 'maybe_set_lang_cookie'), 20);
-        add_filter('home_url', array(__CLASS__, 'filter_home_url'), 10, 4);
+
+        // Remember language in cookie (optional) - frontend only
+        add_action('init', array(__CLASS__, 'maybe_set_lang_cookie'), 20);
     }
 
-    public static function register_query_vars($vars) {
+    public static function add_query_vars($vars) {
         $vars[] = self::QUERY_VAR_LANG;
         $vars[] = self::QUERY_VAR_PATH;
+        $vars[] = 'hmpc_path';
         return $vars;
     }
 
@@ -38,7 +46,9 @@ class HMPCv2_Router {
         }
     }
 
-    public static function maybe_parse_language($wp) {
+    public static function parse_request_lang($wp) {
+        if (is_admin()) return $wp;
+
         $lang = isset($wp->query_vars[self::QUERY_VAR_LANG]) ? $wp->query_vars[self::QUERY_VAR_LANG] : '';
         $path = isset($wp->query_vars[self::QUERY_VAR_PATH]) ? $wp->query_vars[self::QUERY_VAR_PATH] : '';
 
@@ -134,6 +144,8 @@ class HMPCv2_Router {
     }
 
     public static function canonical_redirect_default_prefix() {
+        if (is_admin()) return;
+
         if (HMPCv2_Options::get('prefix_default_lang', false)) {
             return;
         }
@@ -166,6 +178,8 @@ class HMPCv2_Router {
     }
 
     public static function maybe_set_lang_cookie() {
+        if (is_admin()) return;
+
         if (!HMPCv2_Options::get('cookie_remember', true)) {
             return;
         }

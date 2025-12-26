@@ -22,32 +22,56 @@ final class HMPCv2_Resolver {
 
         $enabled = HMPCv2_Langs::enabled_langs();
         $default = HMPCv2_Langs::default_lang();
+
         $lang = HMPCv2_Langs::sanitize_lang_code($lang, $default);
         if (!in_array($lang, $enabled, true)) $lang = $default;
+
+        $prefix_default = HMPCv2_Router::prefix_default_lang();
 
         $base = get_permalink($post_id);
         if (!$base) $base = home_url('/');
 
-        // Convert permalink into path + query
-        $path = (string)parse_url($base, PHP_URL_PATH);
-        $query = (string)parse_url($base, PHP_URL_QUERY);
+        $path  = (string) parse_url($base, PHP_URL_PATH);
+        $query = (string) parse_url($base, PHP_URL_QUERY);
+
         $path = '/' . ltrim($path, '/');
 
-        $prefix_default = HMPCv2_Router::prefix_default_lang();
+        // 1) Strip any existing language prefix from path to avoid /en/en/...
+        $trim = trim($path, '/');
+        $parts = ($trim === '') ? array() : explode('/', $trim);
+        if (!empty($parts)) {
+            $maybe = strtolower((string)$parts[0]);
+            if (HMPCv2_Langs::is_allowed($maybe) && in_array($maybe, $enabled, true)) {
+                array_shift($parts);
+                $path = '/' . implode('/', $parts);
+                if ($path === '//') $path = '/';
+                if ($path === '') $path = '/';
+            }
+        }
+
+        // 2) Plain permalink safety: if path is just "/" but query exists (e.g., ?page_id=123)
+        //    Use /en/?page_id=123 or /?page_id=123 depending on target language.
+        $is_plain_like = ($path === '/' && $query !== '');
 
         if ($lang === $default && !$prefix_default) {
             $url = $path;
         } else {
-            // Ensure /{lang}/ + path
             if ($path === '/' || $path === '') {
                 $url = '/' . $lang . '/';
             } else {
-                $url = '/' . $lang . rtrim($path, '/');
-                $url .= '/';
+                $url = '/' . $lang . '/' . ltrim($path, '/');
             }
         }
 
-        if ($query !== '') $url .= '?' . $query;
+        // Ensure single trailing slash for pretty paths (avoid messing query-only urls)
+        if (!$is_plain_like) {
+            if (substr($url, -1) !== '/') $url .= '/';
+        }
+
+        if ($query !== '') {
+            $url .= (strpos($url, '?') === false ? '?' : '&') . $query;
+        }
+
         return $url;
     }
 

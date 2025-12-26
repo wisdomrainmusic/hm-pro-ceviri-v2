@@ -54,7 +54,7 @@ final class HMPCv2_Admin_Translations {
             .hmpcv2-pill.ok{font-weight:600}
             .hmpcv2-pill.miss{opacity:.7}
             .hmpcv2-table td{vertical-align:top}
-            .hmpcv2-actions button{margin-right:6px}
+            .hmpcv2-actions .button{margin:2px 4px 2px 0}
         ');
     }
 
@@ -231,15 +231,28 @@ final class HMPCv2_Admin_Translations {
                 echo '<td>' . $pills . '</td>';
 
                 echo '<td class="hmpcv2-actions">';
-                if (!empty($missing)) {
-                    foreach ($missing as $code) {
-                        echo '<button type="button" class="button button-small hmpcv2-create-missing"
-                            data-source="' . esc_attr($base_id) . '"
-                            data-lang="' . esc_attr($code) . '">Create ' . esc_html(strtoupper($code)) . '</button>';
+
+                foreach ($enabled as $code) {
+
+                    // Edit if translation exists
+                    if (!empty($map[$code])) {
+                        $edit = get_edit_post_link((int)$map[$code], '');
+                        if ($edit) {
+                            echo '<a class="button button-small" href="' . esc_url($edit) . '">
+                                Edit ' . esc_html(strtoupper($code)) . '
+                            </a> ';
+                        }
                     }
-                } else {
-                    echo '<span style="color:#2a7; font-weight:600;">Complete</span>';
+                    // Otherwise, create missing translation
+                    else {
+                        echo '<button type="button" class="button button-small hmpcv2-create-missing"' .
+                            ' data-source="' . esc_attr($base_id) . '"' .
+                            ' data-lang="' . esc_attr($code) . '">' . "\n" .
+                            '                            Create ' . esc_html(strtoupper($code)) . "\n" .
+                            '                        </button> ';
+                    }
                 }
+
                 echo '</td>';
 
                 echo '</tr>';
