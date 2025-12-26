@@ -22,6 +22,7 @@ require_once HMPCV2_PATH . 'includes/class-hmpcv2-resolver.php';
 require_once HMPCV2_PATH . 'includes/class-hmpcv2-admin.php';
 require_once HMPCV2_PATH . 'includes/class-hmpcv2-admin-translations.php';
 require_once HMPCV2_PATH . 'includes/class-hmpcv2-switcher.php';
+require_once HMPCV2_PATH . 'includes/class-hmpcv2-woo.php';
 
 final class HMPCv2_Plugin {
     private static $instance = null;
@@ -42,6 +43,7 @@ final class HMPCv2_Plugin {
         HMPCv2_Options::maybe_init_defaults();
 
         HMPCv2_Router::init();
+        HMPCv2_Woo::init();
         HMPCv2_Switcher::init();
 
         // Admin
