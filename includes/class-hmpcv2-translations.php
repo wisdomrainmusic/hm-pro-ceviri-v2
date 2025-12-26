@@ -15,6 +15,11 @@ final class HMPCv2_Translations {
         $post_types = get_post_types(array('public' => true), 'names');
         if (!is_array($post_types)) $post_types = array('page', 'post');
 
+        // Products are handled by HMPCv2_Woo single-product language fields
+        if (($k = array_search('product', $post_types, true)) !== false) {
+            unset($post_types[$k]);
+        }
+
         foreach ($post_types as $pt) {
             add_meta_box(
                 'hmpcv2_translations',
