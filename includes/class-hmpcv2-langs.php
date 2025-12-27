@@ -160,5 +160,25 @@ class HMPCv2_Langs {
         $code = strtolower(trim((string) $code));
         return isset($wl[$code]) ? $wl[$code] : strtoupper($code);
     }
+
+    public static function render_dropdown($name = 'lang', $selected = '', $attrs = array()) {
+        $enabled = self::enabled_langs();
+        if (!is_array($enabled) || empty($enabled)) $enabled = array(self::default_lang());
+
+        $attr_str = '';
+        if (is_array($attrs)) {
+            foreach ($attrs as $k => $v) {
+                if ($v === null) continue;
+                $attr_str .= ' ' . esc_attr($k) . '="' . esc_attr((string)$v) . '"';
+            }
+        }
+
+        echo '<select name="' . esc_attr($name) . '"' . $attr_str . '>';
+        foreach ($enabled as $code) {
+            $label = self::label($code);
+            echo '<option value="' . esc_attr($code) . '" ' . selected($selected, $code, false) . '>' . esc_html($label) . '</option>';
+        }
+        echo '</select>';
+    }
 }
 
