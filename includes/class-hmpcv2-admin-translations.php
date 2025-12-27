@@ -16,6 +16,7 @@ final class HMPCv2_Admin_Translations {
         add_action('wp_ajax_hmpcv2_complete_load', array(__CLASS__, 'ajax_complete_load'));
         add_action('wp_ajax_hmpcv2_complete_save', array(__CLASS__, 'ajax_complete_save'));
         add_action('wp_ajax_hmpcv2_style_save', array(__CLASS__, 'ajax_style_save'));
+        add_action('wp_ajax_hmpcv2_list_pages', array(__CLASS__, 'ajax_list_pages'));
     }
 
     public static function menu() {
@@ -204,6 +205,74 @@ final class HMPCv2_Admin_Translations {
         }
 
         wp_send_json_success(array('items' => $out));
+    }
+
+    public static function ajax_list_pages() {
+        if (!current_user_can('manage_options')) wp_send_json_error(array('message' => 'forbidden'), 403);
+
+        $nonce = isset($_POST['nonce']) ? (string)$_POST['nonce'] : '';
+        if (!wp_verify_nonce($nonce, 'hmpcv2_admin_nonce')) wp_send_json_error(array('message' => 'bad_nonce'), 400);
+
+        $page = isset($_POST['page']) ? max(1, absint($_POST['page'])) : 1;
+        $per_page = 50;
+
+        $enabled = HMPCv2_Langs::enabled_langs();
+        $default = HMPCv2_Langs::default_lang();
+
+        $q = new WP_Query(array(
+            'post_type' => 'page',
+            'post_status' => array('publish', 'draft', 'private'),
+            'posts_per_page' => $per_page,
+            'paged' => $page,
+            'orderby' => 'modified',
+            'order' => 'DESC',
+            'no_found_rows' => false,
+            'fields' => 'ids',
+        ));
+
+        $items = array();
+        if ($q->have_posts()) {
+            foreach ($q->posts as $pid) {
+                $pid = (int)$pid;
+
+                $title = get_the_title($pid);
+                $status = get_post_status($pid);
+                $src_lang = HMPCv2_Translations::get_lang($pid) ?: $default;
+
+                $group = self::prepare_group_map($pid, $enabled);
+                $edit_urls = array();
+
+                if (!empty($group['map'])) {
+                    foreach ($group['map'] as $code => $mapped_id) {
+                        $edit = get_edit_post_link((int)$mapped_id, '');
+                        if ($edit) $edit_urls[$code] = $edit;
+                    }
+                }
+
+                $items[] = array(
+                    'id' => $pid,
+                    'title' => $title ? $title : '(no title)',
+                    'status' => (string)$status,
+                    'lang' => (string)$src_lang,
+                    'group' => $group,
+                    'edit_url' => get_edit_post_link($pid, ''),
+                    'edit_urls' => $edit_urls,
+                );
+            }
+        }
+
+        $max_pages = (int)$q->max_num_pages;
+        $has_more = ($page < $max_pages);
+
+        wp_send_json_success(array(
+            'items' => $items,
+            'page' => $page,
+            'per_page' => $per_page,
+            'has_more' => $has_more,
+            'max_pages' => $max_pages,
+            'enabled_langs' => $enabled,
+            'default_lang' => $default,
+        ));
     }
 
     public static function ajax_create_translation() {
@@ -536,37 +605,21 @@ final class HMPCv2_Admin_Translations {
         echo '<div id="hmpcv2-taxonomy-results"></div>';
         echo '</div>';
 
-        // Complete Page tab
+        // Complete Page tab (Pages list)
         echo '<div id="hmpcv2-tab-complete" class="hmpcv2-tab">';
-        echo '<p>Edit a full translation (title, slug, content, excerpt) from one screen.</p>';
+        echo '<p>Pages list: view translation groups and open/edit/create per language.</p>';
 
         echo '<div class="hmpcv2-card">';
         echo '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">';
-        echo '<input type="text" id="hmpcv2-complete-q" placeholder="Search title, slug, or ID" style="width:320px;" />';
-        echo '<input type="hidden" id="hmpcv2-complete-id" value="" />';
-
-        HMPCv2_Langs::render_dropdown('lang', $default, array(
-            'id' => 'hmpcv2-complete-lang',
-            'class' => 'hmpcv2-lang-select',
-        ));
-
-        echo '<button class="button button-primary" type="button" id="hmpcv2-complete-load">Load</button>';
+        echo '<button class="button" type="button" id="hmpcv2-complete-refresh">Refresh list</button>';
+        echo '<span class="hmpcv2-small">Sorted by last modified. Showing 50 per page.</span>';
         echo '</div>';
 
-        echo '<input type="hidden" id="hmpcv2-complete-source-id" value="" />';
+        echo '<div id="hmpcv2-complete-list" style="margin-top:12px"></div>';
 
-        echo '<div id="hmpcv2-complete-editor" style="margin-top:12px;display:none">';
-        echo '<table class="form-table" role="presentation">';
-        echo '<tr><th scope="row"><label>Title</label></th><td><input type="text" id="hmpcv2-c-title" class="regular-text" /></td></tr>';
-        echo '<tr><th scope="row"><label>Slug</label></th><td><input type="text" id="hmpcv2-c-slug" class="regular-text" /></td></tr>';
-        echo '<tr><th scope="row"><label>Excerpt</label></th><td><textarea id="hmpcv2-c-excerpt" class="large-text" rows="4"></textarea></td></tr>';
-        echo '<tr><th scope="row"><label>Content</label></th><td><textarea id="hmpcv2-c-content" class="large-text" rows="10"></textarea></td></tr>';
-        echo '</table>';
-
-        echo '<p>';
-        echo '<button class="button button-primary" type="button" id="hmpcv2-complete-save">Save</button> ';
-        echo '<a href="#" target="_blank" class="button" id="hmpcv2-complete-editlink" style="display:none">Open Edit Screen</a>';
-        echo '</p>';
+        echo '<div style="margin-top:12px">';
+        echo '<button class="button" type="button" id="hmpcv2-complete-loadmore" style="display:none">Load more</button>';
+        echo '<span id="hmpcv2-complete-loading" class="hmpcv2-small" style="display:none;margin-left:8px">Loading…</span>';
         echo '</div>';
 
         echo '</div>'; // card
