@@ -258,6 +258,11 @@ final class HMPCv2_Admin_Translations {
             '_edit_lock',
             '_edit_last',
             'wp_old_slug',
+            '_elementor_data',
+            '_elementor_page_settings',
+            '_elementor_version',
+            '_elementor_edit_mode',
+            '_elementor_template_type',
         );
         foreach ($all_meta as $meta_key => $values) {
             if (in_array($meta_key, $skip_keys, true)) continue;
@@ -273,16 +278,17 @@ final class HMPCv2_Admin_Translations {
             }
         }
 
-        // Ensure Elementor essentials are set explicitly
-        $elementor_keys = array(
-            '_elementor_data',
-            '_elementor_version',
-        );
-        foreach ($elementor_keys as $key) {
-            $value = get_post_meta($source_id, $key, true);
-            if ($value !== '') update_post_meta($new_id, $key, $value);
+        $src_el_data = get_post_meta($source_id, '_elementor_data', true);
+
+        if (class_exists('Elementor\\Plugin')) {
+            $elementor = \Elementor\Plugin::$instance;
+
+            if (isset($elementor->db) && method_exists($elementor->db, 'copy_elementor_meta')) {
+                $elementor->db->copy_elementor_meta($source_id, $new_id);
+            }
+
+            update_post_meta($new_id, '_elementor_edit_mode', 'builder');
         }
-        update_post_meta($new_id, '_elementor_edit_mode', 'builder');
 
         // Copy taxonomies/terms (useful for products/pages with taxonomies)
         $taxes = get_object_taxonomies($source->post_type, 'names');
@@ -300,12 +306,12 @@ final class HMPCv2_Admin_Translations {
 
         // Clear Elementor generated files/cache after duplication
         if (class_exists('Elementor\\Plugin')) {
+            do_action('elementor/core/files/clear_cache');
+
             $elementor = \Elementor\Plugin::$instance;
 
             if (isset($elementor->files_manager)) {
-                if (method_exists($elementor->files_manager, 'clear_cache_for_post')) {
-                    $elementor->files_manager->clear_cache_for_post($new_id);
-                } elseif (method_exists($elementor->files_manager, 'clear_cache')) {
+                if (method_exists($elementor->files_manager, 'clear_cache')) {
                     $elementor->files_manager->clear_cache();
                 }
             }
@@ -313,11 +319,18 @@ final class HMPCv2_Admin_Translations {
             if (isset($elementor->posts_css_manager)) {
                 if (method_exists($elementor->posts_css_manager, 'clear_cache_for_post')) {
                     $elementor->posts_css_manager->clear_cache_for_post($new_id);
-                } elseif (method_exists($elementor->posts_css_manager, 'clear_cache')) {
-                    $elementor->posts_css_manager->clear_cache();
+                }
+            }
+
+            if (class_exists('Elementor\\Core\\Files\\CSS\\Post')) {
+                $post_css = new \Elementor\Core\Files\CSS\Post($new_id);
+                if (method_exists($post_css, 'update')) {
+                    $post_css->update();
                 }
             }
         }
+
+        $target_el_data_after = get_post_meta($new_id, '_elementor_data', true);
 
         $edit = get_edit_post_link($new_id, '');
         $group = HMPCv2_Translations::get_group($new_id);
@@ -328,6 +341,8 @@ final class HMPCv2_Admin_Translations {
             'label' => get_the_title($new_id) . ' (#' . (int)$new_id . ')',
             'group' => $group,
             'map' => $map,
+            'elementor_data_source_len' => is_string($src_el_data) ? strlen($src_el_data) : 0,
+            'elementor_data_target_len' => is_string($target_el_data_after) ? strlen($target_el_data_after) : 0,
         ));
     }
 
