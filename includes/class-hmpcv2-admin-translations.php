@@ -223,6 +223,7 @@ final class HMPCv2_Admin_Translations {
         if (!wp_verify_nonce($nonce, 'hmpcv2_admin_nonce')) wp_send_json_error(array('message' => 'bad_nonce'), 400);
 
         $page = isset($_POST['page']) ? max(1, absint($_POST['page'])) : 1;
+        $only_grouped = isset($_POST['only_grouped']) ? absint($_POST['only_grouped']) : 1; // default ON
         $per_page = 50;
 
         $enabled = HMPCv2_Langs::enabled_langs();
@@ -249,6 +250,19 @@ final class HMPCv2_Admin_Translations {
                 $src_lang = HMPCv2_Translations::get_lang($pid) ?: $default;
 
                 $group = self::prepare_group_map($pid, $enabled);
+                if ($only_grouped) {
+                    $group_id = isset($group['group']) ? (string)$group['group'] : '';
+                    $map = isset($group['map']) && is_array($group['map']) ? $group['map'] : array();
+
+                    $mapped_count = 0;
+                    foreach ($enabled as $code) {
+                        if (!empty($map[$code])) $mapped_count++;
+                    }
+
+                    if ($group_id === '' || $mapped_count < 2) {
+                        continue;
+                    }
+                }
                 $edit_urls = array();
 
                 if (!empty($group['map'])) {
@@ -621,6 +635,10 @@ final class HMPCv2_Admin_Translations {
         echo '<div class="hmpcv2-card">';
         echo '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">';
         echo '<button class="button" type="button" id="hmpcv2-complete-refresh">Refresh list</button>';
+        echo '<label style="display:inline-flex;gap:6px;align-items:center">';
+        echo '<input type="checkbox" id="hmpcv2-complete-only-grouped" checked="checked" />';
+        echo '<span class="hmpcv2-small">Only translated/grouped pages</span>';
+        echo '</label>';
         echo '<span class="hmpcv2-small">Sorted by last modified. Showing 50 per page.</span>';
         echo '</div>';
 

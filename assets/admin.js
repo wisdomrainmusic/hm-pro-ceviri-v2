@@ -204,7 +204,8 @@ jQuery(function ($) {
       $.post(HMPCv2Admin.ajax_url, {
         action: "hmpcv2_list_pages",
         nonce: HMPCv2Admin.nonce,
-        page: this.page
+        page: this.page,
+        only_grouped: $("#hmpcv2-complete-only-grouped").is(":checked") ? 1 : 0
       }).done(function (res) {
         if (!res || !res.success || !res.data) return;
 
@@ -299,6 +300,12 @@ jQuery(function ($) {
 
   // Refresh list button
   $(document).on("click", "#hmpcv2-complete-refresh", function () {
+    completeLoadedOnce = true;
+    HMPCv2Complete.reset();
+    HMPCv2Complete.fetch(false);
+  });
+
+  $(document).on("change", "#hmpcv2-complete-only-grouped", function () {
     completeLoadedOnce = true;
     HMPCv2Complete.reset();
     HMPCv2Complete.fetch(false);
