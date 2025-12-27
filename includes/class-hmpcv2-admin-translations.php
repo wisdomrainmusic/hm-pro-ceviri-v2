@@ -233,7 +233,7 @@ final class HMPCv2_Admin_Translations {
             if (!$src_lang) HMPCv2_Translations::set_lang($source_id, $default);
         }
 
-        $new_id = self::duplicate_as_translation($source_id, $target_lang, $group, $enabled, $default);
+        $new_id = self::duplicate_as_translation($source_id, $target_lang, $group);
         if (!$new_id) wp_send_json_error(array('message' => 'create_failed'), 500);
 
         $target_el_data_after = get_post_meta($new_id, '_elementor_data', true);
@@ -378,21 +378,38 @@ final class HMPCv2_Admin_Translations {
         $source = get_post($source_id);
         if (!$source) wp_send_json_error(array('message' => 'bad_source'), 400);
 
-        // Target bul / yoksa oluştur
-        $target_id = self::ensure_translation_post($source_id, $lang, $enabled, $default);
+        // Ensure group exists on source
+        $group = HMPCv2_Translations::get_group($source_id);
+        if ($group === '') {
+            $group = HMPCv2_Translations::generate_group_id();
+            HMPCv2_Translations::set_group($source_id, $group);
+            $src_lang = HMPCv2_Translations::get_lang($source_id);
+            if (!$src_lang) HMPCv2_Translations::set_lang($source_id, $default);
+        }
+
+        $map = HMPCv2_Translations::get_group_map($group, $enabled);
+        $target_id = !empty($map[$lang]) ? (int)$map[$lang] : 0;
+
+        // Create translation if missing and not the same as source lang
+        if (!$target_id) {
+            $src_lang = HMPCv2_Translations::get_lang($source_id) ?: $default;
+            if ($lang === $src_lang) {
+                $target_id = (int)$source_id;
+            } else {
+                $target_id = (int) self::duplicate_as_translation($source_id, $lang, $group);
+            }
+        }
         $target = get_post($target_id);
         if (!$target) wp_send_json_error(array('message' => 'target_missing'), 500);
 
         wp_send_json_success(array(
-            'source_id' => $source_id,
+            'source_id' => (int)$source_id,
             'target_id' => (int)$target_id,
             'edit_url'  => get_edit_post_link((int)$target_id, ''),
             'title'     => (string)$target->post_title,
             'slug'      => (string)$target->post_name,
             'excerpt'   => (string)$target->post_excerpt,
             'content'   => (string)$target->post_content,
-            'lang'      => (string)HMPCv2_Translations::get_lang((int)$target_id),
-            'group'     => (string)HMPCv2_Translations::get_group((int)$target_id),
         ));
     }
 
@@ -526,6 +543,7 @@ final class HMPCv2_Admin_Translations {
         echo '<div class="hmpcv2-card">';
         echo '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">';
         echo '<input type="text" id="hmpcv2-complete-q" placeholder="Search title, slug, or ID" style="width:320px;" />';
+        echo '<input type="hidden" id="hmpcv2-complete-id" value="" />';
 
         HMPCv2_Langs::render_dropdown('lang', $default, array(
             'id' => 'hmpcv2-complete-lang',
@@ -557,6 +575,7 @@ final class HMPCv2_Admin_Translations {
         // Style tab
         echo '<div id="hmpcv2-tab-style" class="hmpcv2-tab">';
         echo '<p>Fix language dropdown visibility on hero banners and control switcher look.</p>';
+        echo '<p class="hmpcv2-small">Shortcodes: <code>[hmpc_lang_switcher show_codes="1"]</code> <code>[hmpc_lang_dropdown show_codes="0"]</code></p>';
 
         $all = HMPCv2_Options::get_all();
         $style = isset($all['style']) && is_array($all['style']) ? $all['style'] : array();
@@ -575,6 +594,13 @@ final class HMPCv2_Admin_Translations {
         echo '</table>';
 
         echo '<p><button class="button button-primary" type="button" id="hmpcv2-style-save">Save Style</button></p>';
+        echo '<hr style="margin:16px 0;">';
+        echo '<div class="hmpcv2-small">';
+        echo '<strong>Shortcodes</strong><br>';
+        echo '<code>[hmpc_lang_switcher]</code> — link buttons<br>';
+        echo '<code>[hmpc_lang_dropdown]</code> — dropdown selector<br>';
+        echo '<code>[hmpc_lang_dropdown show_codes="1"]</code> — dropdown with language codes';
+        echo '</div>';
         echo '</div>';
 
         echo '</div>';
@@ -607,10 +633,10 @@ final class HMPCv2_Admin_Translations {
 
         // yoksa: mevcut ajax_create_translation mantığını aynı class içinde tekrar kullan
         // en pratik: ajax_create_translation’daki kopyalama blokunu private metoda alıp burada çağır.
-        return (int) self::duplicate_as_translation($source_id, $target_lang, $group, $enabled, $default);
+        return (int) self::duplicate_as_translation($source_id, $target_lang, $group);
     }
 
-    private static function duplicate_as_translation($source_id, $target_lang, $group, $enabled, $default) {
+    private static function duplicate_as_translation($source_id, $target_lang, $group) {
         $source = get_post($source_id);
         if (!$source) return 0;
 
