@@ -230,16 +230,59 @@ final class HMPCv2_Admin_Translations {
             if (!$src_lang) HMPCv2_Translations::set_lang($source_id, $default);
         }
 
-        // Create a draft translation post (empty content) for manual editing
+        // Create a draft translation post as a DUPLICATE of the source (content + meta)
         $new_id = wp_insert_post(array(
-            'post_type' => $source->post_type,
-            'post_status' => 'draft',
-            'post_title' => $source->post_title . ' [' . strtoupper($target_lang) . ']',
-            'post_content' => '',
-            'post_excerpt' => '',
+            'post_type'      => $source->post_type,
+            'post_status'    => 'draft',
+            'post_title'     => $source->post_title . ' [' . strtoupper($target_lang) . ']',
+            'post_content'   => (string) $source->post_content,
+            'post_excerpt'   => (string) $source->post_excerpt,
+            'post_author'    => (int) $source->post_author,
+            'post_parent'    => (int) $source->post_parent,
+            'menu_order'     => (int) $source->menu_order,
+            'comment_status' => (string) $source->comment_status,
+            'ping_status'    => (string) $source->ping_status,
         ), true);
 
         if (is_wp_error($new_id) || !$new_id) wp_send_json_error(array('message' => 'create_failed'), 500);
+
+        // Copy featured image
+        $thumb_id = get_post_thumbnail_id($source_id);
+        if ($thumb_id) {
+            set_post_thumbnail($new_id, $thumb_id);
+        }
+
+        // Copy ALL meta except HMPC + editor locks
+        $all_meta = get_post_meta($source_id);
+        $skip_keys = array(
+            '_edit_lock',
+            '_edit_last',
+            'wp_old_slug',
+        );
+        foreach ($all_meta as $meta_key => $values) {
+            if (in_array($meta_key, $skip_keys, true)) continue;
+            if (strpos($meta_key, '_hmpcv2_') === 0) continue; // our own mapping meta
+
+            // remove any existing key on target first to avoid merges
+            delete_post_meta($new_id, $meta_key);
+
+            foreach ((array) $values as $v) {
+                // values from get_post_meta() are already unserialized in many cases,
+                // but safe to pass as-is.
+                add_post_meta($new_id, $meta_key, maybe_unserialize($v));
+            }
+        }
+
+        // Copy taxonomies/terms (useful for products/pages with taxonomies)
+        $taxes = get_object_taxonomies($source->post_type, 'names');
+        if (!empty($taxes)) {
+            foreach ($taxes as $tax) {
+                $term_ids = wp_get_object_terms($source_id, $tax, array('fields' => 'ids'));
+                if (!is_wp_error($term_ids)) {
+                    wp_set_object_terms($new_id, $term_ids, $tax, false);
+                }
+            }
+        }
 
         HMPCv2_Translations::set_group($new_id, $group);
         HMPCv2_Translations::set_lang($new_id, $target_lang);

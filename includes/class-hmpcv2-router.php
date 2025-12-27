@@ -207,7 +207,16 @@ class HMPCv2_Router {
         $front_id = (int) get_option('page_on_front');
         if ($front_id <= 0) return;
 
-        // /en/ => front page
+        $group = HMPCv2_Translations::get_group($front_id);
+        if ($group) {
+            $enabled = HMPCv2_Langs::enabled_langs();
+            $map = HMPCv2_Translations::get_group_map($group, $enabled);
+            if (!empty($map[$lang])) {
+                $front_id = (int) $map[$lang];
+            }
+        }
+
+        // /en/ => front page (target language equivalent if available)
         $q->set('page_id', $front_id);
 
         // Blog’a düşmesin
