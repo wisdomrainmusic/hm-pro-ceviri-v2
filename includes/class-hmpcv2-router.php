@@ -76,8 +76,17 @@ class HMPCv2_Router {
     public static function parse_request_lang($wp) {
         if (is_admin()) return $wp;
 
+        // Only act on language-prefixed requests.
+        // Non-prefixed URLs must be handled by native WordPress routing.
+        $has_prefix = !empty($wp->query_vars[self::QV_LANG]);
+
         $lang = isset($wp->query_vars[self::QV_LANG]) ? $wp->query_vars[self::QV_LANG] : '';
         $path = isset($wp->query_vars[self::QV_PATH]) ? $wp->query_vars[self::QV_PATH] : '';
+
+        if (!$has_prefix) {
+            HMPCv2_Langs::set_current_language(HMPCv2_Langs::get_default());
+            return $wp;
+        }
 
         if (!$lang) {
             list($lang, $path) = self::detect_from_request();
@@ -100,9 +109,9 @@ class HMPCv2_Router {
 
         HMPCv2_Langs::set_current_language($lang);
 
-        if ($path) {
-            $wp->query_vars['pagename'] = $path;
-        }
+        // IMPORTANT:
+        // Do NOT force pagename.
+        // This breaks taxonomy archives (WooCommerce categories, tags, etc.)
     }
 
     private static function detect_lang_from_request_uri() {
