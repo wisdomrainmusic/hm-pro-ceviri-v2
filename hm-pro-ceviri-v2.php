@@ -18,6 +18,10 @@ require_once HMPCV2_PATH . 'includes/class-hmpcv2-router.php';
 
 require_once HMPCV2_PATH . 'includes/class-hmpcv2-translations.php';
 require_once HMPCV2_PATH . 'includes/class-hmpcv2-resolver.php';
+require_once HMPCV2_PATH . 'includes/core/class-hmpc-language.php';
+
+require_once HMPCV2_PATH . 'includes/menu/class-hmpc-menu-translator.php';
+require_once HMPCV2_PATH . 'includes/menu/class-hmpc-menu-admin-fields.php';
 
 require_once HMPCV2_PATH . 'includes/class-hmpcv2-admin.php';
 require_once HMPCV2_PATH . 'includes/class-hmpcv2-admin-translations.php';
@@ -45,6 +49,7 @@ final class HMPCv2_Plugin {
         HMPCv2_Router::init();
         HMPCv2_Woo::init();
         HMPCv2_Switcher::init();
+        HMPC_Menu_Translator::init();
 
         if (!is_admin()) {
             add_filter('redirect_canonical', function($redirect_url, $requested_url) {
@@ -68,6 +73,7 @@ final class HMPCv2_Plugin {
             HMPCv2_Admin::init();
             HMPCv2_Admin_Translations::init();
             HMPCv2_Translations::init_admin();
+            HMPC_Menu_Admin_Fields::init();
         }
     }
 
