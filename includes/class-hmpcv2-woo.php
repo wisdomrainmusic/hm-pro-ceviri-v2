@@ -215,8 +215,16 @@ final class HMPCv2_Woo {
 		if (is_admin()) return $short;
 		if (!function_exists('is_product') || !is_product()) return $short;
 
-		$post_id = (int) get_queried_object_id();
-		if ($post_id < 1) return $short;
+		// IMPORTANT:
+		// Keep short description override scoped to the actual queried product,
+		// not builder/template posts rendered on the same request.
+		global $post;
+		$qid = (int) get_queried_object_id();
+		if ($qid < 1) return $short;
+		if (!$post || (int)$post->ID !== $qid) return $short;
+		if ((string)$post->post_type !== 'product') return $short;
+
+		$post_id = $qid;
 
 		$lang = self::current_lang_non_default();
 		if ($lang === '') return $short;
