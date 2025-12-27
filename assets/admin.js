@@ -177,4 +177,135 @@ jQuery(function ($) {
       alert("Save failed.");
     });
   });
+
+  // ===== Complete Page (Pages list + Load More) =====
+  var HMPCv2Complete = {
+    page: 1,
+    busy: false,
+    hasMore: true,
+    enabled: [],
+    def: "",
+    reset: function () {
+      this.page = 1;
+      this.hasMore = true;
+      $("#hmpcv2-complete-list").empty();
+      $("#hmpcv2-complete-loadmore").hide();
+    },
+    setBusy: function (on) {
+      this.busy = !!on;
+      $("#hmpcv2-complete-loading").toggle(!!on);
+    },
+    fetch: function (append) {
+      if (this.busy) return;
+      if (!this.hasMore && append) return;
+
+      this.setBusy(true);
+
+      $.post(HMPCv2Admin.ajax_url, {
+        action: "hmpcv2_list_pages",
+        nonce: HMPCv2Admin.nonce,
+        page: this.page
+      }).done(function (res) {
+        if (!res || !res.success || !res.data) return;
+
+        HMPCv2Complete.enabled = res.data.enabled_langs || [];
+        HMPCv2Complete.def = res.data.default_lang || "";
+
+        var items = res.data.items || [];
+        if (!append) $("#hmpcv2-complete-list").empty();
+
+        items.forEach(function (it) {
+          $("#hmpcv2-complete-list").append(HMPCv2Complete.renderRow(it));
+        });
+
+        HMPCv2Complete.hasMore = !!res.data.has_more;
+        $("#hmpcv2-complete-loadmore").toggle(HMPCv2Complete.hasMore);
+
+        if (HMPCv2Complete.hasMore) HMPCv2Complete.page = (res.data.page || HMPCv2Complete.page) + 1;
+      }).fail(function () {
+        // silent
+      }).always(function () {
+        HMPCv2Complete.setBusy(false);
+      });
+    },
+    renderRow: function (it) {
+      var id = it.id;
+      var title = it.title || "(no title)";
+      var status = (it.status || "").toString();
+      var group = it.group || {};
+      var map = group.map || {};
+      var groupId = group.group || "";
+
+      var pills = "";
+      (HMPCv2Complete.enabled || []).forEach(function (code) {
+        var has = !!map[code];
+        pills += '<span class="hmpcv2-pill ' + (has ? "ok" : "miss") + '">' + code.toUpperCase() + "</span>";
+      });
+
+      // actions: mimic Suggested tab style
+      var actions = '<div class="hmpcv2-actions" style="margin-top:6px">';
+      // ensure group button if missing
+      if (!groupId) {
+        actions += '<button type="button" class="button button-small hmpcv2-create-group" data-source="' + id + '">Create group</button> ';
+      }
+
+      (HMPCv2Complete.enabled || []).forEach(function (code) {
+        if (map[code]) {
+          var editUrl = it.edit_urls && it.edit_urls[code] ? it.edit_urls[code] : "";
+          if (editUrl) {
+            actions += '<a class="button button-small" href="' + editUrl + '">Edit ' + code.toUpperCase() + "</a> ";
+          } else {
+            actions += '<span class="hmpcv2-small">(' + code.toUpperCase() + ")</span> ";
+          }
+        } else {
+          actions += '<button type="button" class="button button-small hmpcv2-create-translation" data-lang="' + code + '" data-source="' + id + '">Create ' + code.toUpperCase() + "</button> ";
+        }
+      });
+      actions += "</div>";
+
+      var html = ""
+        + '<div class="hmpcv2-card" data-page-id="' + id + '">'
+        + '<div class="hmpcv2-flex">'
+        + '<div style="flex:2">'
+        + "<strong>" + escapeHtml(title) + "</strong> <span class=\"hmpcv2-small\">#" + id + " — " + escapeHtml(status) + "</span>"
+        + "</div>"
+        + '<div style="flex:3">'
+        + "<div>" + pills + "</div>"
+        + actions
+        + "</div>"
+        + "</div>"
+        + "</div>";
+
+      return html;
+    }
+  };
+
+  function escapeHtml(str) {
+    str = (str || "").toString();
+    return str.replace(/[&<>\"']/g, function (m) {
+      return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#039;" })[m];
+    });
+  }
+
+  // When user opens Complete Page tab, auto-load first page once
+  var completeLoadedOnce = false;
+
+  $(document).on("click", ".hmpcv2-tabs .nav-tab[data-tab=\"complete\"]", function () {
+    if (completeLoadedOnce) return;
+    completeLoadedOnce = true;
+    HMPCv2Complete.reset();
+    HMPCv2Complete.fetch(false);
+  });
+
+  // Refresh list button
+  $(document).on("click", "#hmpcv2-complete-refresh", function () {
+    completeLoadedOnce = true;
+    HMPCv2Complete.reset();
+    HMPCv2Complete.fetch(false);
+  });
+
+  // Load more
+  $(document).on("click", "#hmpcv2-complete-loadmore", function () {
+    HMPCv2Complete.fetch(true);
+  });
 });
