@@ -175,11 +175,28 @@ class HMPCv2_Router {
             return $query_vars;
         }
 
+        // 1) Woo taxonomy archives must stay as archives (map BEFORE url_to_postid)
+        $tax_qv = self::maybe_map_woo_taxonomy_path($path);
+        if (is_array($tax_qv)) {
+            $tax_qv[self::QV_LANG] = $lang;
+            $tax_qv[self::QV_PATH] = $path;
+            return $tax_qv;
+        }
+
         // Resolve the original (unprefixed) URL to a post ID
         $unpref_url = home_url('/' . $path . '/');
         $post_id = (int) url_to_postid($unpref_url);
 
         if ($post_id > 0) {
+            // 2) If translation exists for requested language, force the translated ID
+            $translated_id = 0;
+            if (class_exists('HMPCv2_Resolver')) {
+                $translated_id = (int) HMPCv2_Resolver::resolve_translation_post_id($post_id, $lang);
+            }
+            if ($translated_id > 0) {
+                $post_id = $translated_id;
+            }
+
             $pt = get_post_type($post_id);
             if (!$pt) $pt = 'any';
 
@@ -196,6 +213,58 @@ class HMPCv2_Router {
 
         // If it's not a post, let WP handle (could be taxonomy, search, etc.)
         return $query_vars;
+    }
+
+    private static function maybe_map_woo_taxonomy_path($path) {
+        $path = trim((string)$path, '/');
+        if ($path === '') return null;
+
+        $segs = explode('/', $path);
+        $first = (string)($segs[0] ?? '');
+        if ($first === '') return null;
+
+        // Get Woo permalink bases (supports customized bases like "urun-kategori")
+        $cat_base = '';
+        $tag_base = '';
+
+        if (function_exists('wc_get_permalink_structure')) {
+            $s = (array) wc_get_permalink_structure();
+            $cat_base = isset($s['category_base']) ? trim((string)$s['category_base'], '/') : '';
+            $tag_base = isset($s['tag_base']) ? trim((string)$s['tag_base'], '/') : '';
+        }
+
+        if ($cat_base === '' || $tag_base === '') {
+            $p = (array) get_option('woocommerce_permalinks', array());
+            if ($cat_base === '' && !empty($p['category_base'])) $cat_base = trim((string)$p['category_base'], '/');
+            if ($tag_base === '' && !empty($p['tag_base']))      $tag_base = trim((string)$p['tag_base'], '/');
+        }
+
+        if ($cat_base === '') $cat_base = 'product-category';
+        if ($tag_base === '') $tag_base = 'product-tag';
+
+        // /{lang}/{cat_base}/{term...}
+        if ($first === $cat_base) {
+            $term_path = implode('/', array_slice($segs, 1));
+            $term_path = trim($term_path, '/');
+            if ($term_path === '') return null;
+            return array(
+                'post_type'   => 'product',
+                'product_cat' => $term_path,
+            );
+        }
+
+        // /{lang}/{tag_base}/{term}
+        if ($first === $tag_base) {
+            $term = (string)($segs[1] ?? '');
+            $term = trim($term, '/');
+            if ($term === '') return null;
+            return array(
+                'post_type'   => 'product',
+                'product_tag' => $term,
+            );
+        }
+
+        return null;
     }
 
     public static function force_front_page_for_lang_root($q) {
@@ -379,6 +448,15 @@ class HMPCv2_Router {
         $unpref = home_url('/urun/' . $slug . '/');
         $post_id = (int) url_to_postid($unpref);
         if ($post_id < 1) return;
+
+        // If translation exists for requested language, force translated product ID
+        $translated_id = 0;
+        if (class_exists('HMPCv2_Resolver')) {
+            $translated_id = (int) HMPCv2_Resolver::resolve_translation_post_id($post_id, $lang);
+        }
+        if ($translated_id > 0) {
+            $post_id = $translated_id;
+        }
 
         $wp->query_vars = array(
             'post_type' => 'product',
