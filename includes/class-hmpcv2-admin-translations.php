@@ -13,6 +13,9 @@ final class HMPCv2_Admin_Translations {
         add_action('wp_ajax_hmpcv2_create_group', array(__CLASS__, 'ajax_create_group'));
         add_action('wp_ajax_hmpcv2_search_terms', array(__CLASS__, 'ajax_search_terms'));
         add_action('wp_ajax_hmpcv2_save_term_translation', array(__CLASS__, 'ajax_save_term_translation'));
+        add_action('wp_ajax_hmpcv2_complete_load', array(__CLASS__, 'ajax_complete_load'));
+        add_action('wp_ajax_hmpcv2_complete_save', array(__CLASS__, 'ajax_complete_save'));
+        add_action('wp_ajax_hmpcv2_style_save', array(__CLASS__, 'ajax_style_save'));
     }
 
     public static function menu() {
@@ -230,117 +233,8 @@ final class HMPCv2_Admin_Translations {
             if (!$src_lang) HMPCv2_Translations::set_lang($source_id, $default);
         }
 
-        // Create a translation post as a DUPLICATE of the source (content + meta)
-        $new_id = wp_insert_post(array(
-            'post_type'      => $source->post_type,
-            'post_status'    => $source->post_status ? (string) $source->post_status : 'draft',
-            'post_title'     => $source->post_title . ' [' . strtoupper($target_lang) . ']',
-            'post_content'   => (string) $source->post_content,
-            'post_excerpt'   => (string) $source->post_excerpt,
-            'post_author'    => (int) $source->post_author,
-            'post_parent'    => (int) $source->post_parent,
-            'menu_order'     => (int) $source->menu_order,
-            'comment_status' => (string) $source->comment_status,
-            'ping_status'    => (string) $source->ping_status,
-        ), true);
-
-        if (is_wp_error($new_id) || !$new_id) wp_send_json_error(array('message' => 'create_failed'), 500);
-
-        // Copy featured image
-        $thumb_id = get_post_thumbnail_id($source_id);
-        if ($thumb_id) {
-            set_post_thumbnail($new_id, $thumb_id);
-        }
-
-        // Copy ALL meta except HMPC + editor locks
-        $all_meta = get_post_meta($source_id);
-        $skip_keys = array(
-            '_edit_lock',
-            '_edit_last',
-            'wp_old_slug',
-        );
-        foreach ($all_meta as $meta_key => $values) {
-            if (in_array($meta_key, $skip_keys, true)) continue;
-            if (strpos($meta_key, '_hmpcv2_') === 0) continue; // our own mapping meta
-
-            // remove any existing key on target first to avoid merges
-            delete_post_meta($new_id, $meta_key);
-
-            foreach ((array) $values as $v) {
-                add_post_meta($new_id, $meta_key, maybe_unserialize($v));
-            }
-        }
-
-        // Copy Elementor-specific meta explicitly, preserving raw data
-        $src_el_data_raw = get_post_meta($source_id, '_elementor_data', true);
-        $src_el_page_settings = get_post_meta($source_id, '_elementor_page_settings', true);
-        $src_el_version = get_post_meta($source_id, '_elementor_version', true);
-
-        if (!empty($src_el_data_raw) || $src_el_data_raw === '0') {
-            update_post_meta($new_id, '_elementor_data', $src_el_data_raw);
-        } else {
-            delete_post_meta($new_id, '_elementor_data');
-        }
-
-        if (!empty($src_el_page_settings) || $src_el_page_settings === '0') {
-            update_post_meta($new_id, '_elementor_page_settings', $src_el_page_settings);
-        } else {
-            delete_post_meta($new_id, '_elementor_page_settings');
-        }
-
-        if (!empty($src_el_version) || $src_el_version === '0') {
-            update_post_meta($new_id, '_elementor_version', $src_el_version);
-        } else {
-            delete_post_meta($new_id, '_elementor_version');
-        }
-
-        update_post_meta($new_id, '_elementor_edit_mode', 'builder');
-
-        if (class_exists('Elementor\\Plugin')) {
-            $elementor = \Elementor\Plugin::$instance;
-
-            if (isset($elementor->db) && method_exists($elementor->db, 'copy_elementor_meta')) {
-                $elementor->db->copy_elementor_meta($source_id, $new_id);
-            }
-        }
-
-        // Copy taxonomies/terms (useful for products/pages with taxonomies)
-        $taxes = get_object_taxonomies($source->post_type, 'names');
-        if (!empty($taxes)) {
-            foreach ($taxes as $tax) {
-                $term_ids = wp_get_object_terms($source_id, $tax, array('fields' => 'ids'));
-                if (!is_wp_error($term_ids)) {
-                    wp_set_object_terms($new_id, $term_ids, $tax, false);
-                }
-            }
-        }
-
-        HMPCv2_Translations::set_group($new_id, $group);
-        HMPCv2_Translations::set_lang($new_id, $target_lang);
-
-        // Clear Elementor generated files/cache after duplication
-        if (class_exists('Elementor\\Plugin')) {
-            do_action('elementor/core/files/clear_cache');
-
-            $elementor = \Elementor\Plugin::$instance;
-
-            if (isset($elementor->files_manager) && method_exists($elementor->files_manager, 'clear_cache')) {
-                $elementor->files_manager->clear_cache();
-            }
-
-            if (isset($elementor->posts_css_manager) && method_exists($elementor->posts_css_manager, 'clear_cache_for_post')) {
-                $elementor->posts_css_manager->clear_cache_for_post($new_id);
-            }
-
-            if (class_exists('Elementor\\Core\\Files\\CSS\\Post')) {
-                $post_css = new \Elementor\Core\Files\CSS\Post($new_id);
-                if (method_exists($post_css, 'update')) {
-                    $post_css->update();
-                }
-            }
-        }
-
-        clean_post_cache($new_id);
+        $new_id = self::duplicate_as_translation($source_id, $target_lang, $group, $enabled, $default);
+        if (!$new_id) wp_send_json_error(array('message' => 'create_failed'), 500);
 
         $target_el_data_after = get_post_meta($new_id, '_elementor_data', true);
 
@@ -464,6 +358,95 @@ final class HMPCv2_Admin_Translations {
         wp_send_json_success(array('saved' => true, 'data' => $data));
     }
 
+    private static function must_admin() {
+        if (!current_user_can('manage_options')) wp_send_json_error(array('message' => 'forbidden'), 403);
+        $nonce = isset($_POST['nonce']) ? (string)$_POST['nonce'] : '';
+        if (!wp_verify_nonce($nonce, 'hmpcv2_admin_nonce')) wp_send_json_error(array('message' => 'bad_nonce'), 400);
+    }
+
+    public static function ajax_complete_load() {
+        self::must_admin();
+
+        $source_id = isset($_POST['source_id']) ? (int)$_POST['source_id'] : 0;
+        $lang = isset($_POST['lang']) ? (string)$_POST['lang'] : '';
+
+        $enabled = HMPCv2_Langs::enabled_langs();
+        $default = HMPCv2_Langs::default_lang();
+        $lang = HMPCv2_Langs::sanitize_lang_code($lang, $default);
+        if (!in_array($lang, $enabled, true)) $lang = $default;
+
+        $source = get_post($source_id);
+        if (!$source) wp_send_json_error(array('message' => 'bad_source'), 400);
+
+        // Target bul / yoksa oluştur
+        $target_id = self::ensure_translation_post($source_id, $lang, $enabled, $default);
+        $target = get_post($target_id);
+        if (!$target) wp_send_json_error(array('message' => 'target_missing'), 500);
+
+        wp_send_json_success(array(
+            'source_id' => $source_id,
+            'target_id' => (int)$target_id,
+            'edit_url'  => get_edit_post_link((int)$target_id, ''),
+            'title'     => (string)$target->post_title,
+            'slug'      => (string)$target->post_name,
+            'excerpt'   => (string)$target->post_excerpt,
+            'content'   => (string)$target->post_content,
+            'lang'      => (string)HMPCv2_Translations::get_lang((int)$target_id),
+            'group'     => (string)HMPCv2_Translations::get_group((int)$target_id),
+        ));
+    }
+
+    public static function ajax_complete_save() {
+        self::must_admin();
+
+        $target_id = isset($_POST['target_id']) ? (int)$_POST['target_id'] : 0;
+        if (!$target_id || !get_post($target_id)) wp_send_json_error(array('message' => 'bad_target'), 400);
+
+        $title = isset($_POST['title']) ? sanitize_text_field((string)$_POST['title']) : '';
+        $slug  = isset($_POST['slug']) ? sanitize_title((string)$_POST['slug']) : '';
+        $excerpt = isset($_POST['excerpt']) ? sanitize_textarea_field((string)$_POST['excerpt']) : '';
+        $content = isset($_POST['content']) ? wp_kses_post((string)$_POST['content']) : '';
+
+        $res = wp_update_post(array(
+            'ID' => $target_id,
+            'post_title' => $title,
+            'post_name' => $slug,
+            'post_excerpt' => $excerpt,
+            'post_content' => $content,
+        ), true);
+
+        if (is_wp_error($res)) wp_send_json_error(array('message' => 'save_failed'), 500);
+
+        clean_post_cache($target_id);
+
+        wp_send_json_success(array(
+            'saved' => true,
+            'target_id' => $target_id,
+            'edit_url' => get_edit_post_link($target_id, ''),
+        ));
+    }
+
+    public static function ajax_style_save() {
+        self::must_admin();
+
+        $z = isset($_POST['switcher_z']) ? (int)$_POST['switcher_z'] : 99999;
+        $bg = isset($_POST['switcher_bg']) ? sanitize_text_field((string)$_POST['switcher_bg']) : 'rgba(0,0,0,0.35)';
+        $color = isset($_POST['switcher_color']) ? sanitize_text_field((string)$_POST['switcher_color']) : '#ffffff';
+        $force = !empty($_POST['force_on_hero']) ? 1 : 0;
+
+        $opts = HMPCv2_Options::get_all();
+        $opts['style'] = array(
+            'switcher_z' => $z,
+            'switcher_bg' => $bg,
+            'switcher_color' => $color,
+            'force_on_hero' => $force,
+        );
+
+        HMPCv2_Options::update($opts);
+
+        wp_send_json_success(array('saved' => true, 'style' => $opts['style']));
+    }
+
     public static function render_page() {
         if (!current_user_can('manage_options')) return;
 
@@ -481,6 +464,8 @@ final class HMPCv2_Admin_Translations {
         echo '<a class="nav-tab nav-tab-active" data-tab="content">Content Search</a>';
         echo '<a class="nav-tab" data-tab="suggested">Suggested</a>';
         echo '<a class="nav-tab" data-tab="taxonomy">Taxonomy Search</a>';
+        echo '<a class="nav-tab" data-tab="complete">Complete Page</a>';
+        echo '<a class="nav-tab" data-tab="style">Style</a>';
         echo '</h2>';
 
         // Content search tab
@@ -534,6 +519,66 @@ final class HMPCv2_Admin_Translations {
         echo '<div id="hmpcv2-taxonomy-results"></div>';
         echo '</div>';
 
+        // Complete Page tab
+        echo '<div id="hmpcv2-tab-complete" class="hmpcv2-tab">';
+        echo '<p>Edit a full translation (title, slug, content, excerpt) from one screen.</p>';
+
+        echo '<div class="hmpcv2-card">';
+        echo '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">';
+        echo '<input type="text" id="hmpcv2-complete-q" placeholder="Search title, slug, or ID" style="width:320px;" />';
+
+        HMPCv2_Langs::render_dropdown('lang', $default, array(
+            'id' => 'hmpcv2-complete-lang',
+            'class' => 'hmpcv2-lang-select',
+        ));
+
+        echo '<button class="button button-primary" type="button" id="hmpcv2-complete-load">Load</button>';
+        echo '</div>';
+
+        echo '<input type="hidden" id="hmpcv2-complete-source-id" value="" />';
+
+        echo '<div id="hmpcv2-complete-editor" style="margin-top:12px;display:none">';
+        echo '<table class="form-table" role="presentation">';
+        echo '<tr><th scope="row"><label>Title</label></th><td><input type="text" id="hmpcv2-c-title" class="regular-text" /></td></tr>';
+        echo '<tr><th scope="row"><label>Slug</label></th><td><input type="text" id="hmpcv2-c-slug" class="regular-text" /></td></tr>';
+        echo '<tr><th scope="row"><label>Excerpt</label></th><td><textarea id="hmpcv2-c-excerpt" class="large-text" rows="4"></textarea></td></tr>';
+        echo '<tr><th scope="row"><label>Content</label></th><td><textarea id="hmpcv2-c-content" class="large-text" rows="10"></textarea></td></tr>';
+        echo '</table>';
+
+        echo '<p>';
+        echo '<button class="button button-primary" type="button" id="hmpcv2-complete-save">Save</button> ';
+        echo '<a href="#" target="_blank" class="button" id="hmpcv2-complete-editlink" style="display:none">Open Edit Screen</a>';
+        echo '</p>';
+        echo '</div>';
+
+        echo '</div>'; // card
+        echo '</div>'; // tab
+
+        // Style tab
+        echo '<div id="hmpcv2-tab-style" class="hmpcv2-tab">';
+        echo '<p>Fix language dropdown visibility on hero banners and control switcher look.</p>';
+
+        $all = HMPCv2_Options::get_all();
+        $style = isset($all['style']) && is_array($all['style']) ? $all['style'] : array();
+
+        $z = isset($style['switcher_z']) ? (int)$style['switcher_z'] : 99999;
+        $bg = isset($style['switcher_bg']) ? (string)$style['switcher_bg'] : 'rgba(0,0,0,0.35)';
+        $color = isset($style['switcher_color']) ? (string)$style['switcher_color'] : '#ffffff';
+        $force = !empty($style['force_on_hero']) ? 1 : 0;
+
+        echo '<div class="hmpcv2-card">';
+        echo '<table class="form-table" role="presentation">';
+        echo '<tr><th scope="row"><label>Switcher z-index</label></th><td><input type="number" id="hmpcv2-style-z" value="' . esc_attr($z) . '" /></td></tr>';
+        echo '<tr><th scope="row"><label>Switcher background</label></th><td><input type="text" id="hmpcv2-style-bg" class="regular-text" value="' . esc_attr($bg) . '" /></td></tr>';
+        echo '<tr><th scope="row"><label>Switcher text color</label></th><td><input type="text" id="hmpcv2-style-color" class="regular-text" value="' . esc_attr($color) . '" /></td></tr>';
+        echo '<tr><th scope="row"><label>Force visible on hero</label></th><td><label><input type="checkbox" id="hmpcv2-style-force" ' . checked(1, $force, false) . ' /> Enable</label></td></tr>';
+        echo '</table>';
+
+        echo '<p><button class="button button-primary" type="button" id="hmpcv2-style-save">Save Style</button></p>';
+        echo '</div>';
+
+        echo '</div>';
+
         echo '</div>';
         echo '</div>';
     }
@@ -545,6 +590,104 @@ final class HMPCv2_Admin_Translations {
             'group' => $group,
             'map' => $map,
         );
+    }
+
+    private static function ensure_translation_post($source_id, $target_lang, $enabled, $default) {
+        $group = HMPCv2_Translations::get_group($source_id);
+
+        if ($group === '') {
+            $group = HMPCv2_Translations::generate_group_id();
+            HMPCv2_Translations::set_group($source_id, $group);
+            $src_lang = HMPCv2_Translations::get_lang($source_id);
+            if (!$src_lang) HMPCv2_Translations::set_lang($source_id, $default);
+        }
+
+        $map = HMPCv2_Translations::get_group_map($group, $enabled);
+        if (!empty($map[$target_lang])) return (int)$map[$target_lang];
+
+        // yoksa: mevcut ajax_create_translation mantığını aynı class içinde tekrar kullan
+        // en pratik: ajax_create_translation’daki kopyalama blokunu private metoda alıp burada çağır.
+        return (int) self::duplicate_as_translation($source_id, $target_lang, $group, $enabled, $default);
+    }
+
+    private static function duplicate_as_translation($source_id, $target_lang, $group, $enabled, $default) {
+        $source = get_post($source_id);
+        if (!$source) return 0;
+
+        $new_id = wp_insert_post(array(
+            'post_type'      => $source->post_type,
+            'post_status'    => $source->post_status ? (string) $source->post_status : 'draft',
+            'post_title'     => $source->post_title . ' [' . strtoupper($target_lang) . ']',
+            'post_content'   => (string) $source->post_content,
+            'post_excerpt'   => (string) $source->post_excerpt,
+            'post_author'    => (int) $source->post_author,
+            'post_parent'    => (int) $source->post_parent,
+            'menu_order'     => (int) $source->menu_order,
+            'comment_status' => (string) $source->comment_status,
+            'ping_status'    => (string) $source->ping_status,
+        ), true);
+
+        if (is_wp_error($new_id) || !$new_id) return 0;
+
+        $thumb_id = get_post_thumbnail_id($source_id);
+        if ($thumb_id) set_post_thumbnail($new_id, $thumb_id);
+
+        $all_meta = get_post_meta($source_id);
+        $skip_keys = array('_edit_lock','_edit_last','wp_old_slug');
+        foreach ($all_meta as $meta_key => $values) {
+            if (in_array($meta_key, $skip_keys, true)) continue;
+            if (strpos($meta_key, '_hmpcv2_') === 0) continue;
+            delete_post_meta($new_id, $meta_key);
+            foreach ((array) $values as $v) add_post_meta($new_id, $meta_key, maybe_unserialize($v));
+        }
+
+        // Elementor meta (aynı)
+        $src_el_data_raw = get_post_meta($source_id, '_elementor_data', true);
+        $src_el_page_settings = get_post_meta($source_id, '_elementor_page_settings', true);
+        $src_el_version = get_post_meta($source_id, '_elementor_version', true);
+
+        if (!empty($src_el_data_raw) || $src_el_data_raw === '0') update_post_meta($new_id, '_elementor_data', $src_el_data_raw);
+        else delete_post_meta($new_id, '_elementor_data');
+
+        if (!empty($src_el_page_settings) || $src_el_page_settings === '0') update_post_meta($new_id, '_elementor_page_settings', $src_el_page_settings);
+        else delete_post_meta($new_id, '_elementor_page_settings');
+
+        if (!empty($src_el_version) || $src_el_version === '0') update_post_meta($new_id, '_elementor_version', $src_el_version);
+        else delete_post_meta($new_id, '_elementor_version');
+
+        update_post_meta($new_id, '_elementor_edit_mode', 'builder');
+
+        if (class_exists('Elementor\\Plugin')) {
+            $elementor = \Elementor\Plugin::$instance;
+            if (isset($elementor->db) && method_exists($elementor->db, 'copy_elementor_meta')) {
+                $elementor->db->copy_elementor_meta($source_id, $new_id);
+            }
+        }
+
+        $taxes = get_object_taxonomies($source->post_type, 'names');
+        if (!empty($taxes)) {
+            foreach ($taxes as $tax) {
+                $term_ids = wp_get_object_terms($source_id, $tax, array('fields' => 'ids'));
+                if (!is_wp_error($term_ids)) wp_set_object_terms($new_id, $term_ids, $tax, false);
+            }
+        }
+
+        HMPCv2_Translations::set_group($new_id, $group);
+        HMPCv2_Translations::set_lang($new_id, $target_lang);
+
+        if (class_exists('Elementor\\Plugin')) {
+            do_action('elementor/core/files/clear_cache');
+            $elementor = \Elementor\Plugin::$instance;
+            if (isset($elementor->files_manager) && method_exists($elementor->files_manager, 'clear_cache')) $elementor->files_manager->clear_cache();
+            if (isset($elementor->posts_css_manager) && method_exists($elementor->posts_css_manager, 'clear_cache_for_post')) $elementor->posts_css_manager->clear_cache_for_post($new_id);
+            if (class_exists('Elementor\\Core\\Files\\CSS\\Post')) {
+                $post_css = new \Elementor\Core\Files\CSS\Post($new_id);
+                if (method_exists($post_css, 'update')) $post_css->update();
+            }
+        }
+
+        clean_post_cache($new_id);
+        return (int)$new_id;
     }
 
     private static function render_lang_status($map, $enabled) {

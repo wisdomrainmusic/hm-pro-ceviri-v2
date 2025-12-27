@@ -18,6 +18,12 @@ final class HMPCv2_Options {
             'prefix_default_lang' => false,
             'cookie_remember' => true,
             'cookie_days' => 30,
+            'style' => array(
+                'switcher_z' => 99999,
+                'switcher_bg' => 'rgba(0,0,0,0.35)',
+                'switcher_color' => '#ffffff',
+                'force_on_hero' => 0,
+            ),
         );
     }
 
@@ -44,6 +50,15 @@ final class HMPCv2_Options {
         $clean['cookie_remember'] = (bool) $clean['cookie_remember'];
         $clean['cookie_days'] = max(1, absint($clean['cookie_days']));
 
+        // style
+        $style = isset($clean['style']) && is_array($clean['style']) ? $clean['style'] : array();
+        $clean['style'] = array(
+            'switcher_z' => isset($style['switcher_z']) ? (int)$style['switcher_z'] : 99999,
+            'switcher_bg' => isset($style['switcher_bg']) ? sanitize_text_field((string)$style['switcher_bg']) : 'rgba(0,0,0,0.35)',
+            'switcher_color' => isset($style['switcher_color']) ? sanitize_text_field((string)$style['switcher_color']) : '#ffffff',
+            'force_on_hero' => !empty($style['force_on_hero']) ? 1 : 0,
+        );
+
         if (!self::is_language_allowed($clean['default_lang'], $clean['enabled_langs'])) {
             $clean['default_lang'] = $clean['enabled_langs'] ? self::get_first_language($clean['enabled_langs']) : 'tr';
         }
@@ -66,6 +81,15 @@ final class HMPCv2_Options {
         $clean['prefix_default_lang'] = (bool) $clean['prefix_default_lang'];
         $clean['cookie_remember'] = (bool) $clean['cookie_remember'];
         $clean['cookie_days'] = max(1, absint($clean['cookie_days']));
+
+        // style
+        $style = isset($clean['style']) && is_array($clean['style']) ? $clean['style'] : array();
+        $clean['style'] = array(
+            'switcher_z' => isset($style['switcher_z']) ? (int)$style['switcher_z'] : 99999,
+            'switcher_bg' => isset($style['switcher_bg']) ? sanitize_text_field((string)$style['switcher_bg']) : 'rgba(0,0,0,0.35)',
+            'switcher_color' => isset($style['switcher_color']) ? sanitize_text_field((string)$style['switcher_color']) : '#ffffff',
+            'force_on_hero' => !empty($style['force_on_hero']) ? 1 : 0,
+        );
 
         if (!self::is_language_allowed($clean['default_lang'], $clean['enabled_langs'])) {
             $clean['default_lang'] = $clean['enabled_langs'] ? self::get_first_language($clean['enabled_langs']) : 'tr';

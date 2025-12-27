@@ -8,12 +8,31 @@ final class HMPCv2_Switcher {
 		add_action('wp_enqueue_scripts', array(__CLASS__, 'styles'));
 	}
 
-	public static function styles() {
-		$css = '.hmpc-switcher{display:flex;gap:8px;flex-wrap:wrap}.hmpc-switcher a{padding:6px 10px;border:1px solid rgba(0,0,0,.15);border-radius:6px;text-decoration:none}.hmpc-switcher a.is-active{font-weight:600}';
-		wp_register_style('hmpc-switcher-inline', false, array(), HMPCV2_VERSION);
-		wp_enqueue_style('hmpc-switcher-inline');
-		wp_add_inline_style('hmpc-switcher-inline', $css);
-	}
+        public static function styles() {
+                $opts = HMPCv2_Options::get_all();
+                $style = isset($opts['style']) && is_array($opts['style']) ? $opts['style'] : array();
+
+                $z = isset($style['switcher_z']) ? (int)$style['switcher_z'] : 99999;
+                $bg = isset($style['switcher_bg']) ? (string)$style['switcher_bg'] : 'rgba(0,0,0,0.35)';
+                $color = isset($style['switcher_color']) ? (string)$style['switcher_color'] : '#ffffff';
+                $force = !empty($style['force_on_hero']) ? 1 : 0;
+
+                $css = ''
+                . '.hmpc-switcher{display:flex;gap:8px;flex-wrap:wrap;position:relative;z-index:' . $z . '}'
+                . '.hmpc-switcher a{padding:6px 10px;border:1px solid rgba(0,0,0,.15);border-radius:6px;text-decoration:none;'
+                . 'background:' . $bg . ';color:' . $color . ';}'
+                . '.hmpc-switcher a.is-active{font-weight:600}';
+
+                if ($force) {
+                        // Hero overlay / header stacking context fix
+                        $css .= '.site-header{position:relative;z-index:9999}'
+                              . '.elementor-background-overlay{z-index:1}';
+                }
+
+                wp_register_style('hmpc-switcher-inline', false, array(), HMPCV2_VERSION);
+                wp_enqueue_style('hmpc-switcher-inline');
+                wp_add_inline_style('hmpc-switcher-inline', $css);
+        }
 
 	public static function shortcode($atts) {
 		$atts = shortcode_atts(array(
