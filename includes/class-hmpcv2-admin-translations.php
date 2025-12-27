@@ -230,10 +230,10 @@ final class HMPCv2_Admin_Translations {
             if (!$src_lang) HMPCv2_Translations::set_lang($source_id, $default);
         }
 
-        // Create a draft translation post as a DUPLICATE of the source (content + meta)
+        // Create a translation post as a DUPLICATE of the source (content + meta)
         $new_id = wp_insert_post(array(
             'post_type'      => $source->post_type,
-            'post_status'    => 'draft',
+            'post_status'    => $source->post_status ? (string) $source->post_status : 'draft',
             'post_title'     => $source->post_title . ' [' . strtoupper($target_lang) . ']',
             'post_content'   => (string) $source->post_content,
             'post_excerpt'   => (string) $source->post_excerpt,
@@ -273,6 +273,17 @@ final class HMPCv2_Admin_Translations {
             }
         }
 
+        // Ensure Elementor essentials are set explicitly
+        $elementor_keys = array(
+            '_elementor_data',
+            '_elementor_version',
+        );
+        foreach ($elementor_keys as $key) {
+            $value = get_post_meta($source_id, $key, true);
+            if ($value !== '') update_post_meta($new_id, $key, $value);
+        }
+        update_post_meta($new_id, '_elementor_edit_mode', 'builder');
+
         // Copy taxonomies/terms (useful for products/pages with taxonomies)
         $taxes = get_object_taxonomies($source->post_type, 'names');
         if (!empty($taxes)) {
@@ -286,6 +297,27 @@ final class HMPCv2_Admin_Translations {
 
         HMPCv2_Translations::set_group($new_id, $group);
         HMPCv2_Translations::set_lang($new_id, $target_lang);
+
+        // Clear Elementor generated files/cache after duplication
+        if (class_exists('Elementor\\Plugin')) {
+            $elementor = \Elementor\Plugin::$instance;
+
+            if (isset($elementor->files_manager)) {
+                if (method_exists($elementor->files_manager, 'clear_cache_for_post')) {
+                    $elementor->files_manager->clear_cache_for_post($new_id);
+                } elseif (method_exists($elementor->files_manager, 'clear_cache')) {
+                    $elementor->files_manager->clear_cache();
+                }
+            }
+
+            if (isset($elementor->posts_css_manager)) {
+                if (method_exists($elementor->posts_css_manager, 'clear_cache_for_post')) {
+                    $elementor->posts_css_manager->clear_cache_for_post($new_id);
+                } elseif (method_exists($elementor->posts_css_manager, 'clear_cache')) {
+                    $elementor->posts_css_manager->clear_cache();
+                }
+            }
+        }
 
         $edit = get_edit_post_link($new_id, '');
         $group = HMPCv2_Translations::get_group($new_id);
