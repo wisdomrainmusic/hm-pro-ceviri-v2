@@ -15,6 +15,7 @@ class HMPCv2_Router {
         add_action('parse_request', array(__CLASS__, 'parse_request_lang_prefixed'), 0);
         add_filter('request', array(__CLASS__, 'map_lang_prefixed_request'), 1);
         add_action('pre_get_posts', array(__CLASS__, 'force_front_page_for_lang_root'), 0);
+        add_action('wp', array(__CLASS__, 'ensure_non_404_for_resolved_objects'), 0);
 
         // IMPORTANT: Router behavior must be FRONTEND-only
         if (is_admin()) {
@@ -213,6 +214,41 @@ class HMPCv2_Router {
 
         // If it's not a post, let WP handle (could be taxonomy, search, etc.)
         return $query_vars;
+    }
+
+    /**
+     * Astra (and some themes) switch to error layout if the main query remains in 404 state,
+     * even when a valid object was resolved for prefixed routes.
+     * If we have a valid resolved product under a language prefix, force proper flags and 200.
+     */
+    public static function ensure_non_404_for_resolved_objects() {
+        if (is_admin()) return;
+
+        $lang = get_query_var(self::QV_LANG);
+        if (!is_string($lang) || $lang === '') return;
+
+        global $wp_query;
+        if (!$wp_query) return;
+
+        $qid = (int) get_queried_object_id();
+        if ($qid < 1) return;
+
+        $pt = get_post_type($qid);
+        if ($pt !== 'product') return;
+
+        if (!empty($wp_query->is_404)) {
+            $wp_query->is_404 = false;
+        }
+
+        $wp_query->is_singular = true;
+        $wp_query->is_single = true;
+        $wp_query->is_page = false;
+        $wp_query->is_home = false;
+        $wp_query->is_archive = false;
+
+        if (!headers_sent()) {
+            status_header(200);
+        }
     }
 
     private static function maybe_map_woo_taxonomy_path($path) {
