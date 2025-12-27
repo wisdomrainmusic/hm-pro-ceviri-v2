@@ -14,6 +14,7 @@ class HMPCv2_Router {
         add_action('init', array(__CLASS__, 'register_rewrites'), 5);
         add_action('parse_request', array(__CLASS__, 'parse_request_lang_prefixed'), 0);
         add_filter('request', array(__CLASS__, 'map_lang_prefixed_request'), 1);
+        add_action('pre_get_posts', array(__CLASS__, 'force_front_page_for_lang_root'), 0);
 
         // IMPORTANT: Router behavior must be FRONTEND-only
         if (is_admin()) {
@@ -186,6 +187,39 @@ class HMPCv2_Router {
 
         // If it's not a post, let WP handle (could be taxonomy, search, etc.)
         return $query_vars;
+    }
+
+    public static function force_front_page_for_lang_root($q) {
+        if (is_admin() || !$q->is_main_query()) return;
+
+        $lang = $q->get(self::QV_LANG);
+        if (!$lang) return;
+
+        // Sadece "/en/" gibi dil köklerinde çalışsın: path yoksa root kabul ediyoruz
+        $path = $q->get(self::QV_PATH);
+        if (!empty($path)) return;
+
+        // Eğer WP zaten belirli bir şeye gidiyorsa (page_id, p, pagename vs) karışma
+        if ($q->get('page_id') || $q->get('p') || $q->get('pagename') || $q->get('post_type')) {
+            return;
+        }
+
+        $front_id = (int) get_option('page_on_front');
+        if ($front_id <= 0) return;
+
+        // /en/ => front page
+        $q->set('page_id', $front_id);
+
+        // Blog’a düşmesin
+        $q->set('pagename', '');
+        $q->set('name', '');
+        $q->set('category_name', '');
+        $q->set('tag', '');
+
+        $q->is_home = false;
+        $q->is_front_page = true;
+        $q->is_page = true;
+        $q->is_singular = true;
     }
 
     public static function prefix_default_lang() {
