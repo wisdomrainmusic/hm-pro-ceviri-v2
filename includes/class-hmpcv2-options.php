@@ -4,6 +4,7 @@ if (!defined('ABSPATH')) exit;
 
 final class HMPCv2_Options {
     const OPT_KEY = 'hmpcv2_settings';
+    const TERM_OPT_KEY = 'hmpcv2_term_translations';
 
     public static function defaults() {
         return array(
@@ -142,5 +143,33 @@ final class HMPCv2_Options {
             $labels = self::get('lang_labels', array());
         }
         return isset($labels[$code]) ? $labels[$code] : HMPCv2_Langs::label($code);
+    }
+
+    public static function get_term_translations() {
+        $val = get_option(self::TERM_OPT_KEY, array());
+        return is_array($val) ? $val : array();
+    }
+
+    public static function save_term_translation($term_id, $lang, $data) {
+        $term_id = (int)$term_id;
+        $lang = HMPCv2_Langs::sanitize_lang_code($lang, '');
+        if ($term_id < 1 || $lang === '') return false;
+
+        $existing = self::get_term_translations();
+        if (!isset($existing[$term_id]) || !is_array($existing[$term_id])) {
+            $existing[$term_id] = array();
+        }
+
+        $name = isset($data['name']) ? sanitize_text_field((string)$data['name']) : '';
+        $slug = isset($data['slug']) ? sanitize_title((string)$data['slug']) : '';
+        $description = isset($data['description']) ? wp_kses_post((string)$data['description']) : '';
+
+        $existing[$term_id][$lang] = array(
+            'name' => $name,
+            'slug' => $slug,
+            'description' => $description,
+        );
+
+        return update_option(self::TERM_OPT_KEY, $existing, false);
     }
 }
