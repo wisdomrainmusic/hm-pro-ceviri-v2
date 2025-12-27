@@ -32,8 +32,17 @@ final class HMPCv2_Admin_Translations {
 
     public static function enqueue($hook) {
         $screen = function_exists('get_current_screen') ? get_current_screen() : null;
-        $is_post_screen = $screen && !empty($screen->base) && $screen->base === 'post';
-        $is_translations_screen = ($hook === 'settings_page_hmpcv2-translations');
+
+        $is_post_screen = ($screen && !empty($screen->base) && $screen->base === 'post');
+
+        // Hard-reliable check: ?page=hmpcv2-translations
+        $page_param = isset($_GET['page']) ? sanitize_key((string)$_GET['page']) : '';
+        $is_translations_screen = ($page_param === 'hmpcv2-translations');
+
+        // Extra safety: also allow screen id match if available
+        if (!$is_translations_screen && $screen && !empty($screen->id)) {
+            $is_translations_screen = ((string)$screen->id === 'settings_page_hmpcv2-translations');
+        }
 
         if (!$is_post_screen && !$is_translations_screen) return;
 
