@@ -165,11 +165,8 @@ final class HMPCv2_Woo {
 		if (is_admin()) return false;
 		if (!function_exists('is_product') || !is_product()) return false;
 		if ((int)get_queried_object_id() !== (int)$post_id) return false;
-
-		$post = get_post($post_id);
-		if (!$post || $post->post_type !== 'product') return false;
-
-		return true;
+		$p = get_post($post_id);
+		return ($p && $p->post_type === 'product');
 	}
 
 	private static function current_lang_non_default() {
@@ -194,8 +191,8 @@ final class HMPCv2_Woo {
 		if (!function_exists('is_product') || !is_product()) return $content;
 
 		// IMPORTANT:
-		// On product pages, builders/themes may call the_content() for non-product template posts.
-		// Only translate when the_content() is applied to the queried product post itself.
+		// Builders/themes may call the_content() for template posts while on a product page.
+		// Only override when the_content() is executed for the queried product post itself.
 		global $post;
 		$qid = (int) get_queried_object_id();
 		if ($qid < 1) return $content;
@@ -216,8 +213,8 @@ final class HMPCv2_Woo {
 		if (!function_exists('is_product') || !is_product()) return $short;
 
 		// IMPORTANT:
-		// Keep short description override scoped to the actual queried product,
-		// not builder/template posts rendered on the same request.
+		// Keep short description override scoped to the actual queried product post,
+		// not template posts rendered by builders/themes.
 		global $post;
 		$qid = (int) get_queried_object_id();
 		if ($qid < 1) return $short;
