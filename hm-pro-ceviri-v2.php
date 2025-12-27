@@ -18,6 +18,7 @@ require_once HMPCV2_PATH . 'includes/class-hmpcv2-router.php';
 
 require_once HMPCV2_PATH . 'includes/class-hmpcv2-translations.php';
 require_once HMPCV2_PATH . 'includes/class-hmpcv2-resolver.php';
+require_once HMPCV2_PATH . 'includes/class-hmpcv2-term-translations.php';
 require_once HMPCV2_PATH . 'includes/core/class-hmpc-language.php';
 
 require_once HMPCV2_PATH . 'includes/menu/class-hmpc-menu-translator.php';
@@ -49,6 +50,7 @@ final class HMPCv2_Plugin {
         HMPCv2_Router::init();
         HMPCv2_Woo::init();
         HMPCv2_Switcher::init();
+        HMPCv2_Term_Translations::init();
         HMPC_Menu_Translator::init();
 
         if (!is_admin()) {
