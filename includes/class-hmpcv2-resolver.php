@@ -76,58 +76,44 @@ final class HMPCv2_Resolver {
     }
 
     public static function switch_url_for_current_context($target_lang) {
-        $target_lang = HMPCv2_Langs::sanitize_lang_code($target_lang, HMPCv2_Langs::default_lang());
-
-        // If viewing a singular post/page, try to map to translation in same group
-        if (is_singular()) {
-
-            // IMPORTANT: Products are single-post translations (no duplication)
-            if (is_singular('product')) {
-                $source_id = get_queried_object_id();
-                return self::permalink_with_lang($source_id, $target_lang);
-            }
-
-            $source_id = get_queried_object_id();
-            $target_id = self::resolve_translation_post_id($source_id, $target_lang);
-
-            if ($target_id > 0) {
-                return self::permalink_with_lang($target_id, $target_lang);
-            }
-
-            return self::permalink_with_lang($source_id, $target_lang);
-        }
-
-        // Non-singular (archives/search/etc): best-effort prefix approach based on current request path
-        $enabled = HMPCv2_Langs::enabled_langs();
         $default = HMPCv2_Langs::default_lang();
-        $prefix_default = HMPCv2_Router::prefix_default_lang();
 
-        $req = isset($_SERVER['REQUEST_URI']) ? (string)$_SERVER['REQUEST_URI'] : '/';
-        $path = parse_url($req, PHP_URL_PATH);
-        $path = '/' . ltrim((string)$path, '/');
+        $target_lang = HMPCv2_Langs::sanitize_lang_code($target_lang, $default);
 
-        $trim = trim($path, '/');
-        $parts = ($trim === '') ? array() : explode('/', $trim);
+        $uri = isset($_SERVER['REQUEST_URI']) ? (string) $_SERVER['REQUEST_URI'] : '/';
+        $parts = wp_parse_url($uri);
+        $path  = isset($parts['path']) ? (string) $parts['path'] : '/';
+        $query = isset($parts['query']) ? ('?' . $parts['query']) : '';
 
-        // Remove existing lang prefix if present
-        if (!empty($parts)) {
-            $maybe = strtolower((string)$parts[0]);
-            if (HMPCv2_Langs::is_allowed($maybe) && in_array($maybe, $enabled, true)) {
-                array_shift($parts);
+        if (!$path) $path = '/';
+
+        $langs = HMPCv2_Langs::enabled_langs();
+        $path = '/' . ltrim($path, '/');
+        foreach ($langs as $lg) {
+            $lg = HMPCv2_Langs::sanitize_lang_code($lg, $lg);
+            $prefix = '/' . $lg . '/';
+
+            if (stripos($path, $prefix) === 0) {
+                $path = '/' . ltrim(substr($path, strlen($prefix) - 1), '/');
+                break;
+            }
+
+            if ($path === '/' . $lg) {
+                $path = '/';
+                break;
             }
         }
 
-        $rest = '/' . implode('/', $parts);
-        if ($rest === '//') $rest = '/';
-        if ($rest === '') $rest = '/';
+        $is_root = ($path === '/' || $path === '');
 
-        $query = parse_url($req, PHP_URL_QUERY);
-        $query_suffix = $query ? ('?' . $query) : '';
-
-        if ($target_lang === $default && !$prefix_default) {
-            return $rest . $query_suffix;
+        if ($target_lang === $default) {
+            $new_path = $is_root ? '/' : $path;
+        } else {
+            $new_path = $is_root ? '/' . $target_lang . '/' : '/' . $target_lang . rtrim($path, '/');
         }
 
-        return '/' . $target_lang . ($rest === '/' ? '/' : $rest) . $query_suffix;
+        $new_path = preg_replace('#/+#', '/', $new_path);
+
+        return home_url($new_path) . $query;
     }
 }
