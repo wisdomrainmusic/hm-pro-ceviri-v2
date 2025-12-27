@@ -258,11 +258,6 @@ final class HMPCv2_Admin_Translations {
             '_edit_lock',
             '_edit_last',
             'wp_old_slug',
-            '_elementor_data',
-            '_elementor_page_settings',
-            '_elementor_version',
-            '_elementor_edit_mode',
-            '_elementor_template_type',
         );
         foreach ($all_meta as $meta_key => $values) {
             if (in_array($meta_key, $skip_keys, true)) continue;
@@ -272,13 +267,34 @@ final class HMPCv2_Admin_Translations {
             delete_post_meta($new_id, $meta_key);
 
             foreach ((array) $values as $v) {
-                // values from get_post_meta() are already unserialized in many cases,
-                // but safe to pass as-is.
                 add_post_meta($new_id, $meta_key, maybe_unserialize($v));
             }
         }
 
-        $src_el_data = get_post_meta($source_id, '_elementor_data', true);
+        // Copy Elementor-specific meta explicitly, preserving raw data
+        $src_el_data_raw = get_post_meta($source_id, '_elementor_data', true);
+        $src_el_page_settings = get_post_meta($source_id, '_elementor_page_settings', true);
+        $src_el_version = get_post_meta($source_id, '_elementor_version', true);
+
+        if (!empty($src_el_data_raw) || $src_el_data_raw === '0') {
+            update_post_meta($new_id, '_elementor_data', $src_el_data_raw);
+        } else {
+            delete_post_meta($new_id, '_elementor_data');
+        }
+
+        if (!empty($src_el_page_settings) || $src_el_page_settings === '0') {
+            update_post_meta($new_id, '_elementor_page_settings', $src_el_page_settings);
+        } else {
+            delete_post_meta($new_id, '_elementor_page_settings');
+        }
+
+        if (!empty($src_el_version) || $src_el_version === '0') {
+            update_post_meta($new_id, '_elementor_version', $src_el_version);
+        } else {
+            delete_post_meta($new_id, '_elementor_version');
+        }
+
+        update_post_meta($new_id, '_elementor_edit_mode', 'builder');
 
         if (class_exists('Elementor\\Plugin')) {
             $elementor = \Elementor\Plugin::$instance;
@@ -286,8 +302,6 @@ final class HMPCv2_Admin_Translations {
             if (isset($elementor->db) && method_exists($elementor->db, 'copy_elementor_meta')) {
                 $elementor->db->copy_elementor_meta($source_id, $new_id);
             }
-
-            update_post_meta($new_id, '_elementor_edit_mode', 'builder');
         }
 
         // Copy taxonomies/terms (useful for products/pages with taxonomies)
@@ -310,16 +324,12 @@ final class HMPCv2_Admin_Translations {
 
             $elementor = \Elementor\Plugin::$instance;
 
-            if (isset($elementor->files_manager)) {
-                if (method_exists($elementor->files_manager, 'clear_cache')) {
-                    $elementor->files_manager->clear_cache();
-                }
+            if (isset($elementor->files_manager) && method_exists($elementor->files_manager, 'clear_cache')) {
+                $elementor->files_manager->clear_cache();
             }
 
-            if (isset($elementor->posts_css_manager)) {
-                if (method_exists($elementor->posts_css_manager, 'clear_cache_for_post')) {
-                    $elementor->posts_css_manager->clear_cache_for_post($new_id);
-                }
+            if (isset($elementor->posts_css_manager) && method_exists($elementor->posts_css_manager, 'clear_cache_for_post')) {
+                $elementor->posts_css_manager->clear_cache_for_post($new_id);
             }
 
             if (class_exists('Elementor\\Core\\Files\\CSS\\Post')) {
@@ -329,6 +339,8 @@ final class HMPCv2_Admin_Translations {
                 }
             }
         }
+
+        clean_post_cache($new_id);
 
         $target_el_data_after = get_post_meta($new_id, '_elementor_data', true);
 
@@ -341,7 +353,7 @@ final class HMPCv2_Admin_Translations {
             'label' => get_the_title($new_id) . ' (#' . (int)$new_id . ')',
             'group' => $group,
             'map' => $map,
-            'elementor_data_source_len' => is_string($src_el_data) ? strlen($src_el_data) : 0,
+            'elementor_data_source_len' => is_string($src_el_data_raw) ? strlen($src_el_data_raw) : 0,
             'elementor_data_target_len' => is_string($target_el_data_after) ? strlen($target_el_data_after) : 0,
         ));
     }
