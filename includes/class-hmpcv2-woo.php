@@ -164,7 +164,12 @@ final class HMPCv2_Woo {
 	private static function is_frontend_product_context($post_id) {
 		if (is_admin()) return false;
 		if (!function_exists('is_product') || !is_product()) return false;
-		return ((int)get_queried_object_id() === (int)$post_id);
+		if ((int)get_queried_object_id() !== (int)$post_id) return false;
+
+		$post = get_post($post_id);
+		if (!$post || $post->post_type !== 'product') return false;
+
+		return true;
 	}
 
 	private static function current_lang_non_default() {
@@ -188,8 +193,16 @@ final class HMPCv2_Woo {
 		if (is_admin()) return $content;
 		if (!function_exists('is_product') || !is_product()) return $content;
 
-		$post_id = (int) get_queried_object_id();
-		if ($post_id < 1) return $content;
+		// IMPORTANT:
+		// On product pages, builders/themes may call the_content() for non-product template posts.
+		// Only translate when the_content() is applied to the queried product post itself.
+		global $post;
+		$qid = (int) get_queried_object_id();
+		if ($qid < 1) return $content;
+		if (!$post || (int)$post->ID !== $qid) return $content;
+		if ((string)$post->post_type !== 'product') return $content;
+
+		$post_id = $qid;
 
 		$lang = self::current_lang_non_default();
 		if ($lang === '') return $content;
