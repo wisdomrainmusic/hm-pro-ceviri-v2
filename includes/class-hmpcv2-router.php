@@ -128,6 +128,7 @@ class HMPCv2_Router {
         add_action('pre_get_posts', array(__CLASS__, 'force_product_single_for_prefixed_urun'), -1);
         add_action('pre_get_posts', array(__CLASS__, 'force_front_page_for_lang_root'), 0);
         add_action('wp', array(__CLASS__, 'ensure_non_404_for_resolved_objects'), 0);
+        add_filter('template_include', array(__CLASS__, 'force_woo_single_product_template'), 1);
         add_filter('template_include', array(__CLASS__, 'force_single_product_template'), 1);
 
         // IMPORTANT: Router behavior must be FRONTEND-only
@@ -791,6 +792,40 @@ class HMPCv2_Router {
                 }
             }
             // Fallback: if Woo can't locate, keep current template.
+        }
+
+        return $template;
+    }
+
+    public static function force_woo_single_product_template($template) {
+        if (is_admin() || wp_doing_ajax()) return $template;
+
+        // Only for /en/urun/* (debug ile aynı scope)
+        if (empty($_SERVER['REQUEST_URI'])) return $template;
+        $path = (string) parse_url((string) $_SERVER['REQUEST_URI'], PHP_URL_PATH);
+        $path = '/' . ltrim($path, '/');
+        if (!preg_match('#^/en/urun/#i', $path)) return $template;
+
+        // Strong condition: queried object is a product
+        $qid = function_exists('get_queried_object_id') ? (int) get_queried_object_id() : 0;
+        if ($qid <= 0) return $template;
+        if (get_post_type($qid) !== 'product') return $template;
+
+        // 1) Theme override (preferred)
+        $theme_tpl = locate_template(array(
+            'woocommerce/single-product.php',
+            'single-product.php',
+        ));
+        if (!empty($theme_tpl) && file_exists($theme_tpl)) {
+            return $theme_tpl;
+        }
+
+        // 2) WooCommerce plugin template fallback
+        if (function_exists('WC') && WC() && method_exists(WC(), 'plugin_path')) {
+            $wc_tpl = trailingslashit(WC()->plugin_path()) . 'templates/single-product.php';
+            if (file_exists($wc_tpl)) {
+                return $wc_tpl;
+            }
         }
 
         return $template;
