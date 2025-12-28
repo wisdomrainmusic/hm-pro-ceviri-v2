@@ -77,6 +77,7 @@ class HMPCv2_Router {
         add_action('init', array(__CLASS__, 'register_rewrites'), 5);
         add_action('parse_request', array(__CLASS__, 'parse_request_lang_prefixed'), 0);
         add_filter('request', array(__CLASS__, 'map_lang_prefixed_request'), 1);
+        add_action('pre_get_posts', array(__CLASS__, 'force_product_single_for_prefixed_urun'), -1);
         add_action('pre_get_posts', array(__CLASS__, 'force_front_page_for_lang_root'), 0);
         add_action('wp', array(__CLASS__, 'ensure_non_404_for_resolved_objects'), 0);
 
@@ -444,6 +445,61 @@ class HMPCv2_Router {
         $q->is_home = false;
         $q->is_front_page = true;
         $q->is_page = true;
+        $q->is_singular = true;
+    }
+
+    public static function force_product_single_for_prefixed_urun($q) {
+        if (is_admin() || !$q->is_main_query()) return;
+
+        // Raw URI check (query_vars'a güvenmiyoruz)
+        $uri = isset($_SERVER['REQUEST_URI']) ? (string) $_SERVER['REQUEST_URI'] : '';
+        $path = $uri ? (string) parse_url($uri, PHP_URL_PATH) : '';
+        if (!$path) return;
+
+        // enabled langs
+        $enabled = HMPCv2_Langs::enabled_langs();
+        if (!is_array($enabled) || empty($enabled)) return;
+
+        // Match: /en/urun/slug  (slug tek segment varsayımı; senin ürünlerde böyle)
+        if (!preg_match('#^/([a-z]{2})/urun/([^/]+)/?$#i', $path, $m)) return;
+
+        $lang = strtolower($m[1]);
+        if (!in_array($lang, $enabled, true)) return;
+
+        $slug = urldecode($m[2]);
+        $slug = trim($slug);
+        if ($slug === '') return;
+
+        // Resolve product by slug from DB (most stable)
+        $product = get_page_by_path($slug, OBJECT, 'product');
+        if (!$product || empty($product->ID)) return;
+
+        $post_id = (int) $product->ID;
+
+        // If translation exists for requested language, map to translated product ID
+        if (class_exists('HMPCv2_Resolver')) {
+            $translated_id = (int) HMPCv2_Resolver::resolve_translation_post_id($post_id, $lang);
+            if ($translated_id > 0) $post_id = $translated_id;
+        }
+
+        // Force main query
+        $q->set('post_type', 'product');
+        $q->set('p', $post_id);
+
+        // Keep plugin context vars for switcher/resolver
+        $q->set(self::QV_LANG, $lang);
+        $q->set(self::QV_PATH, 'urun/' . $slug);
+
+        // Prevent WP from treating it as page
+        $q->set('page_id', '');
+        $q->set('pagename', '');
+        $q->set('name', '');
+
+        // Flags: bazı temalar bunlara bakıyor
+        $q->is_home = false;
+        $q->is_front_page = false;
+        $q->is_page = false;
+        $q->is_single = true;
         $q->is_singular = true;
     }
 
