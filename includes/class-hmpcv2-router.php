@@ -19,7 +19,7 @@ class HMPCv2_Router {
         }
         $path = (string) parse_url((string) $_SERVER['REQUEST_URI'], PHP_URL_PATH);
         $path = '/' . ltrim($path, '/');
-        return (bool) preg_match('#^/en/urun/#i', $path);
+        return (bool) preg_match('#^/([a-z]{2})/urun/#i', $path);
     }
 
     private static function debug_log($hook, $extra = array()) {
