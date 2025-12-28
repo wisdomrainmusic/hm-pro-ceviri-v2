@@ -13,6 +13,47 @@ class HMPCv2_Router {
         return (strpos($p, 'urun/') === 0);
     }
 
+    public static function rescue_404_prefixed_product() {
+        if (is_admin() || wp_doing_ajax()) {
+            return;
+        }
+
+        // Only act when WP thinks it's 404.
+        if (!is_404()) {
+            return;
+        }
+
+        $lang = get_query_var(self::QV_LANG);
+        $path = get_query_var(self::QV_PATH);
+        if (!$lang || !$path) {
+            return;
+        }
+
+        if (!self::is_product_path($path)) {
+            return;
+        }
+
+        $slug = trim(substr($path, strlen('urun/')), "/");
+        if ($slug === '') {
+            return;
+        }
+
+        // Find product by slug (post_name).
+        $product = get_page_by_path($slug, OBJECT, 'product');
+        if (!$product || empty($product->ID)) {
+            return;
+        }
+
+        // Redirect to the real product permalink (prevents theme error-page).
+        $target = get_permalink($product->ID);
+        if (!$target) {
+            return;
+        }
+
+        wp_redirect($target, 301);
+        exit;
+    }
+
     private static function is_shop_path($path) {
         $p = trim((string) $path, "/ \t\n\r\0\x0B");
         return ($p === 'magaza' || $p === 'shop');
@@ -43,6 +84,9 @@ class HMPCv2_Router {
         if (is_admin()) {
             return;
         }
+
+        // SAFETY NET: if /<lang>/urun/<slug> falls into 404, rescue it.
+        add_action('template_redirect', array(__CLASS__, 'rescue_404_prefixed_product'), 0);
 
         add_action('parse_request', array(__CLASS__, 'parse_request_lang'), 1);
         add_action('template_redirect', array(__CLASS__, 'canonical_redirect_default_prefix'), 1);
