@@ -1,45 +1,58 @@
 <?php
 /**
- * HMPCv2 Single Product Wrapper (Astra-safe)
- * Renders prefixed product pages with the same structural wrappers Astra expects.
+ * HMPCv2 Single Product Wrapper (Elementor-first)
+ * Goal: For prefixed product URLs, render Elementor Theme Builder "Single" template
+ * so layout matches the site’s real product design.
  */
 if (!defined('ABSPATH')) exit;
 
-// Ensure global post is set.
-global $post;
-
-// Normal theme header (NOT shop header)
 get_header();
 
-// Astra expects these wrappers for layout/container.
-if (function_exists('astra_primary_content_top')) {
-    astra_primary_content_top();
-}
+// If Elementor Theme Builder can render a "single" location, use it.
+// This will output the correct Single Product template (same as TR) when conditions match.
+$rendered = false;
 
-// Match Astra's main content structure.
-echo '<div id="primary" class="content-area primary">';
-echo '<main id="main" class="site-main">';
+if (function_exists('elementor_theme_do_location')) {
+    ob_start();
+    $ok = elementor_theme_do_location('single');
+    $out = ob_get_clean();
 
-// Woo hooks + content.
-do_action('woocommerce_before_main_content');
-
-if (function_exists('woocommerce_content')) {
-    woocommerce_content();
-} else {
-    // Fallback
-    while (have_posts()) {
-        the_post();
-        the_content();
+    // elementor_theme_do_location returns true/false; also ensure output is non-empty
+    if ($ok && trim((string) $out) !== '') {
+        echo $out;
+        $rendered = true;
     }
 }
 
-do_action('woocommerce_after_main_content');
+// Fallback: if Elementor doesn't render anything, use Woo content in Astra-like wrappers.
+if (!$rendered) {
 
-echo '</main>';
-echo '</div>';
+    if (function_exists('astra_primary_content_top')) {
+        astra_primary_content_top();
+    }
 
-if (function_exists('astra_primary_content_bottom')) {
-    astra_primary_content_bottom();
+    echo '<div id="primary" class="content-area primary">';
+    echo '<main id="main" class="site-main">';
+
+    do_action('woocommerce_before_main_content');
+
+    if (function_exists('woocommerce_content')) {
+        woocommerce_content();
+    } else {
+        while (have_posts()) {
+            the_post();
+            the_content();
+        }
+    }
+
+    do_action('woocommerce_after_main_content');
+
+    echo '</main>';
+    echo '</div>';
+
+    if (function_exists('astra_primary_content_bottom')) {
+        astra_primary_content_bottom();
+    }
 }
 
 get_footer();
