@@ -128,7 +128,7 @@ class HMPCv2_Router {
         add_action('pre_get_posts', array(__CLASS__, 'force_product_single_for_prefixed_urun'), -1);
         add_action('pre_get_posts', array(__CLASS__, 'force_front_page_for_lang_root'), 0);
         add_action('wp', array(__CLASS__, 'ensure_non_404_for_resolved_objects'), 0);
-        add_filter('template_include', array(__CLASS__, 'debug_template_include'), 0);
+        add_filter('template_include', array(__CLASS__, 'force_single_product_template'), 1);
 
         // IMPORTANT: Router behavior must be FRONTEND-only
         if (is_admin()) {
@@ -554,6 +554,15 @@ class HMPCv2_Router {
         $q->is_page = false;
         $q->is_single = true;
         $q->is_singular = true;
+        // Force query flags so themes/Woo loaders treat it as a singular product.
+        $q->is_404 = false;
+        $q->is_archive = false;
+        $q->is_post_type_archive = false;
+        $q->is_attachment = false;
+        $q->is_search = false;
+        $q->is_feed = false;
+
+        $q->queried_object_id = $post_id;
     }
 
     public static function prefix_default_lang() {
@@ -757,8 +766,33 @@ class HMPCv2_Router {
         }
     }
 
-    public static function debug_template_include($template) {
+    public static function force_single_product_template($template) {
         self::debug_log('template_include', array('template' => $template));
+        if (is_admin() || wp_doing_ajax()) {
+            return $template;
+        }
+
+        // Only our problematic prefixed product URLs.
+        if (empty($_SERVER['REQUEST_URI'])) {
+            return $template;
+        }
+        $path = (string) parse_url((string) $_SERVER['REQUEST_URI'], PHP_URL_PATH);
+        $path = '/' . ltrim($path, '/');
+        if (!preg_match('#^/([a-z]{2})/urun/#i', $path)) {
+            return $template;
+        }
+
+        // If WP resolved a product, force Woo single-product template loader.
+        if (function_exists('is_singular') && is_singular('product')) {
+            if (function_exists('wc_locate_template')) {
+                $woo = wc_locate_template('single-product.php');
+                if ($woo && file_exists($woo)) {
+                    return $woo;
+                }
+            }
+            // Fallback: if Woo can't locate, keep current template.
+        }
+
         return $template;
     }
 }
