@@ -79,6 +79,7 @@ class HMPCv2_Router {
         add_filter('request', array(__CLASS__, 'map_lang_prefixed_request'), 1);
         add_action('pre_get_posts', array(__CLASS__, 'force_product_single_for_prefixed_urun'), -1);
         add_action('pre_get_posts', array(__CLASS__, 'force_front_page_for_lang_root'), 0);
+        add_action('parse_query', array(__CLASS__, 'force_non_404_for_prefixed_product_query'), 0);
         add_action('wp', array(__CLASS__, 'ensure_non_404_for_resolved_objects'), 0);
         add_filter('body_class', array(__CLASS__, 'body_class_force_product'), 20);
         add_filter('template_include', array(__CLASS__, 'force_single_product_template_for_prefixed_product'), 99);
@@ -329,6 +330,19 @@ class HMPCv2_Router {
         global $wp_query;
         if (!is_object($wp_query)) return;
 
+        $p  = (int) ($wp_query->get('p'));
+        $pt = $wp_query->get('post_type');
+
+        if ($p > 0 && ($pt === 'product' || (is_array($pt) && in_array('product', $pt, true)))) {
+            $wp_query->is_404 = false;
+            $wp_query->queried_object_id = $p;
+            if (!headers_sent()) {
+                status_header(200);
+                if (function_exists('nocache_headers')) nocache_headers();
+            }
+            return;
+        }
+
         $qid = get_queried_object_id();
         if ($qid > 0 && !empty($wp_query->is_404)) {
             $wp_query->is_404 = false;
@@ -352,6 +366,38 @@ class HMPCv2_Router {
                 if (function_exists('nocache_headers')) {
                     nocache_headers();
                 }
+            }
+        }
+    }
+
+    public static function force_non_404_for_prefixed_product_query($q) {
+        if (is_admin() || !$q instanceof WP_Query) return;
+        if (!$q->is_main_query()) return;
+
+        // Only for: /{lang}/urun/...
+        $uri  = isset($_SERVER['REQUEST_URI']) ? (string) $_SERVER['REQUEST_URI'] : '';
+        $path = $uri ? (string) parse_url($uri, PHP_URL_PATH) : '';
+        if (!$path) return;
+
+        if (!preg_match('#^/([a-z]{2})/urun/#i', $path)) return;
+
+        // If main query is already targeting a product via p + post_type, force flags NOW
+        $p  = (int) $q->get('p');
+        $pt = $q->get('post_type');
+
+        if ($p > 0 && ($pt === 'product' || (is_array($pt) && in_array('product', $pt, true)))) {
+            $q->is_404 = false;
+            $q->is_singular = true;
+            $q->is_single = true;
+            $q->is_page = false;
+            $q->is_archive = false;
+
+            // Some themes rely on queried_object_id
+            $q->queried_object_id = $p;
+
+            // Also ensure proper status header early
+            if (!headers_sent()) {
+                status_header(200);
             }
         }
     }
