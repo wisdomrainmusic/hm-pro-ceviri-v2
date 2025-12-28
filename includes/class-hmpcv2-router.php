@@ -82,6 +82,7 @@ class HMPCv2_Router {
         add_action('parse_query', array(__CLASS__, 'force_non_404_for_prefixed_product_query'), 0);
         add_action('wp', array(__CLASS__, 'ensure_non_404_for_resolved_objects'), 0);
         add_filter('body_class', array(__CLASS__, 'body_class_force_product'), 20);
+        add_filter('template_include', array(__CLASS__, 'force_woocommerce_single_product_template'), 999);
         add_filter('template_include', array(__CLASS__, 'force_single_product_template_for_prefixed_product'), 99);
 
         // IMPORTANT: Router behavior must be FRONTEND-only
@@ -778,6 +779,41 @@ class HMPCv2_Router {
         }
 
         return array_values(array_unique($classes));
+    }
+
+    public static function force_woocommerce_single_product_template($template) {
+        if (is_admin() || wp_doing_ajax()) return $template;
+
+        $uri  = isset($_SERVER['REQUEST_URI']) ? (string) $_SERVER['REQUEST_URI'] : '';
+        $path = $uri ? (string) parse_url($uri, PHP_URL_PATH) : '';
+        if (!$path) return $template;
+
+        // Only for /{lang}/urun/...
+        if (!preg_match('#^/([a-z]{2})/urun/#i', $path)) {
+            return $template;
+        }
+
+        $qid = function_exists('get_queried_object_id') ? (int) get_queried_object_id() : 0;
+        if ($qid <= 0 || get_post_type($qid) !== 'product') {
+            return $template;
+        }
+
+        // Make sure Woo context is set
+        if (function_exists('wc_setup_product_data')) {
+            wc_setup_product_data($qid);
+        }
+
+        // 1) Theme override
+        $theme_tpl = locate_template(array('woocommerce/single-product.php'));
+        if (!empty($theme_tpl)) return $theme_tpl;
+
+        // 2) Woo plugin template
+        if (defined('WC_PLUGIN_FILE')) {
+            $wc_tpl = trailingslashit(plugin_dir_path(WC_PLUGIN_FILE)) . 'templates/single-product.php';
+            if (file_exists($wc_tpl)) return $wc_tpl;
+        }
+
+        return $template;
     }
 
     public static function force_single_product_template_for_prefixed_product($template) {
