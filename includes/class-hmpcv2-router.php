@@ -8,6 +8,23 @@ class HMPCv2_Router {
     const QV_LANG = 'hmpcv2_lang';
     const QV_PATH = 'hmpcv2_path';
 
+    private static function is_shop_path($path) {
+        $p = trim((string) $path, "/ \t\n\r\0\x0B");
+        return ($p === 'magaza' || $p === 'shop');
+    }
+
+    private static function force_shop_archive_query($query_vars) {
+        // Force Woo "shop" archive behavior.
+        // Important: remove single/page vars to prevent page template rendering.
+        unset($query_vars['p'], $query_vars['page_id'], $query_vars['pagename'], $query_vars['name'], $query_vars['attachment']);
+        $query_vars['post_type'] = 'product';
+        // Keep paging if present.
+        if (!isset($query_vars['paged']) && isset($query_vars['page'])) {
+            $query_vars['paged'] = absint($query_vars['page']);
+        }
+        return $query_vars;
+    }
+
     public static function init() {
         add_filter('query_vars', array(__CLASS__, 'register_query_vars'));
         add_action('init', array(__CLASS__, 'register_rewrite_rules'), 5);
@@ -169,6 +186,13 @@ class HMPCv2_Router {
         $lang = strtolower((string) $query_vars[self::QV_LANG]);
         $path = (string) $query_vars[self::QV_PATH];
         $path = trim($path, '/');
+
+        // SHOP ROUTE FIX:
+        // /<lang>/magaza and /<lang>/shop must behave like Woo Shop archive, not a Page.
+        if (self::is_shop_path($path)) {
+            $query_vars = self::force_shop_archive_query($query_vars);
+            return $query_vars;
+        }
 
         // Guard: language must be enabled
         $enabled = HMPCv2_Langs::enabled_langs();
@@ -410,6 +434,12 @@ class HMPCv2_Router {
         if (is_admin()) return;
 
         if (HMPCv2_Options::get('prefix_default_lang', false)) {
+            return;
+        }
+
+        // Avoid redirect/canonical clashes for forced shop archive routes.
+        $path = get_query_var(self::QV_PATH);
+        if (self::is_shop_path($path)) {
             return;
         }
 
