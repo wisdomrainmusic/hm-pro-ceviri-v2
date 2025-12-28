@@ -248,8 +248,9 @@ class HMPCv2_Router {
         if (self::is_product_path($path)) {
             $slug = trim(substr($path, strlen('urun/')), '/');
             if ($slug !== '') {
-                // Try exact product by slug (no sanitize_title to avoid mismatches)
                 $slug = urldecode($slug);
+
+                // Resolve product directly by slug (post_name)
                 $product = get_page_by_path($slug, OBJECT, 'product');
                 if ($product && !empty($product->ID)) {
                     $post_id = (int) $product->ID;
@@ -262,7 +263,6 @@ class HMPCv2_Router {
                         }
                     }
 
-                    // Force single product query
                     return array(
                         'post_type'   => 'product',
                         'p'           => $post_id,
