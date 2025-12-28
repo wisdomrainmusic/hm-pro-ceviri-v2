@@ -8,6 +8,11 @@ class HMPCv2_Router {
     const QV_LANG = 'hmpcv2_lang';
     const QV_PATH = 'hmpcv2_path';
 
+    private static function is_product_path($path) {
+        $p = trim((string) $path, "/ \t\n\r\0\x0B");
+        return (strpos($p, 'urun/') === 0);
+    }
+
     private static function is_shop_path($path) {
         $p = trim((string) $path, "/ \t\n\r\0\x0B");
         return ($p === 'magaza' || $p === 'shop');
@@ -246,32 +251,28 @@ class HMPCv2_Router {
      * If we have a valid resolved product under a language prefix, force proper flags and 200.
      */
     public static function ensure_non_404_for_resolved_objects() {
-        if (is_admin()) return;
-
-        $lang = get_query_var(self::QV_LANG);
-        if (!is_string($lang) || $lang === '') return;
-
         global $wp_query;
-        if (!$wp_query) return;
+        if (!is_object($wp_query)) return;
 
-        $qid = (int) get_queried_object_id();
-        if ($qid < 1) return;
-
-        $pt = get_post_type($qid);
-        if ($pt !== 'product') return;
-
-        if (!empty($wp_query->is_404)) {
-            $wp_query->is_404 = false;
+        $qid = get_queried_object_id();
+        if ($qid > 0 && (is_singular() || is_page() || is_single())) {
+            if (!empty($wp_query->is_404)) {
+                $wp_query->is_404 = false;
+                status_header(200);
+                if (function_exists('nocache_headers')) {
+                    nocache_headers();
+                }
+            }
         }
 
-        $wp_query->is_singular = true;
-        $wp_query->is_single = true;
-        $wp_query->is_page = false;
-        $wp_query->is_home = false;
-        $wp_query->is_archive = false;
-
-        if (!headers_sent()) {
-            status_header(200);
+        if (isset($wp_query->query_vars['post_type']) && $wp_query->query_vars['post_type'] === 'product') {
+            if (!empty($wp_query->is_404) && (get_queried_object_id() > 0)) {
+                $wp_query->is_404 = false;
+                status_header(200);
+                if (function_exists('nocache_headers')) {
+                    nocache_headers();
+                }
+            }
         }
     }
 
@@ -495,6 +496,27 @@ class HMPCv2_Router {
         if (is_admin()) return;
         if (empty($wp) || !isset($wp->request)) return;
 
+        $lang = isset($wp->query_vars[self::QV_LANG]) ? (string) $wp->query_vars[self::QV_LANG] : '';
+        $path = isset($wp->query_vars[self::QV_PATH]) ? (string) $wp->query_vars[self::QV_PATH] : '';
+
+        if ($lang && self::is_product_path($path)) {
+            $slug = trim(substr($path, strlen('urun/')), '/');
+            if ($slug !== '') {
+                $unpref = '/urun/' . $slug . '/';
+                $post_id = (int) url_to_postid($unpref);
+
+                if ($post_id > 0 && get_post_type($post_id) === 'product') {
+                    $wp->query_vars['post_type'] = 'product';
+                    $wp->query_vars['p'] = $post_id;
+                    $wp->query_vars[self::QV_LANG] = $lang;
+                    $wp->query_vars[self::QV_PATH] = $path;
+                } else {
+                    $wp->query_vars[self::QV_LANG] = $lang;
+                    $wp->query_vars[self::QV_PATH] = $path;
+                }
+            }
+        }
+
         $req = trim((string) $wp->request, '/');
         if ($req === '') return;
 
@@ -513,27 +535,31 @@ class HMPCv2_Router {
 
         $unpref = home_url('/urun/' . $slug . '/');
         $post_id = (int) url_to_postid($unpref);
-        if ($post_id < 1) return;
+        if ($post_id > 0) {
+            // If translation exists for requested language, force translated product ID
+            $translated_id = 0;
+            if (class_exists('HMPCv2_Resolver')) {
+                $translated_id = (int) HMPCv2_Resolver::resolve_translation_post_id($post_id, $lang);
+            }
+            if ($translated_id > 0) {
+                $post_id = $translated_id;
+            }
 
-        // If translation exists for requested language, force translated product ID
-        $translated_id = 0;
-        if (class_exists('HMPCv2_Resolver')) {
-            $translated_id = (int) HMPCv2_Resolver::resolve_translation_post_id($post_id, $lang);
+            $wp->query_vars = array(
+                'post_type' => 'product',
+                'p' => $post_id,
+                self::QV_LANG => $lang,
+                self::QV_PATH => implode('/', array_slice($parts, 1)),
+            );
+
+            $wp->matched_rule  = 'hmpcv2_parse_request';
+            $wp->matched_query = 'post_type=product&p=' . $post_id;
+
+            set_query_var(self::QV_LANG, $lang);
+            $_GET[self::QV_LANG] = $lang;
+        } else {
+            $wp->query_vars[self::QV_LANG] = $lang;
+            $wp->query_vars[self::QV_PATH] = implode('/', array_slice($parts, 1));
         }
-        if ($translated_id > 0) {
-            $post_id = $translated_id;
-        }
-
-        $wp->query_vars = array(
-            'post_type' => 'product',
-            'p' => $post_id,
-            self::QV_LANG => $lang,
-        );
-
-        $wp->matched_rule  = 'hmpcv2_parse_request';
-        $wp->matched_query = 'post_type=product&p=' . $post_id;
-
-        set_query_var(self::QV_LANG, $lang);
-        $_GET[self::QV_LANG] = $lang;
     }
 }
