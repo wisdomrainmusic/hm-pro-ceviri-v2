@@ -299,6 +299,11 @@ class HMPCv2_Router {
         if (!is_object($wp_query)) return;
 
         $qid = get_queried_object_id();
+        if ($qid > 0 && !empty($wp_query->is_404)) {
+            $wp_query->is_404 = false;
+            status_header(200);
+        }
+
         if ($qid > 0 && (is_singular() || is_page() || is_single())) {
             if (!empty($wp_query->is_404)) {
                 $wp_query->is_404 = false;
@@ -542,6 +547,41 @@ class HMPCv2_Router {
 
         $lang = isset($wp->query_vars[self::QV_LANG]) ? (string) $wp->query_vars[self::QV_LANG] : '';
         $path = isset($wp->query_vars[self::QV_PATH]) ? (string) $wp->query_vars[self::QV_PATH] : '';
+
+        // === HMPCv2: Product slug fallback resolver (hard fix) ===
+        $request_uri = isset($_SERVER['REQUEST_URI']) ? (string) $_SERVER['REQUEST_URI'] : '';
+        $path_only   = $request_uri ? wp_parse_url($request_uri, PHP_URL_PATH) : '';
+        $path_only   = is_string($path_only) ? trim($path_only) : '';
+        if ($path_only !== '' && preg_match('#^/([a-z]{2})/urun/([^/]+)/?$#i', $path_only, $m)) {
+            $lang = strtolower($m[1]);
+            $slug = sanitize_title($m[2]);
+
+            // First try: your existing default-language url_to_postid strategy
+            $try = '/urun/' . $slug . '/';
+            $id  = url_to_postid($try);
+
+            // Fallback: resolve directly from DB by product slug (post_name)
+            if (!$id) {
+                $p = get_page_by_path($slug, OBJECT, 'product');
+                if ($p && !empty($p->ID)) {
+                    $id = (int) $p->ID;
+                }
+            }
+
+            // If resolved, force single product query vars
+            if ($id && get_post_type($id) === 'product') {
+                $wp->query_vars['post_type']   = 'product';
+                $wp->query_vars['p']           = (int) $id;
+
+                // Keep language context for switcher/resolver
+                $wp->query_vars['hmpcv2_lang'] = $lang;
+                $wp->query_vars['hmpcv2_path'] = 'urun/' . $slug;
+
+                // Safety: clear conflicting vars that could push WP to page/singular mismatch
+                unset($wp->query_vars['page_id'], $wp->query_vars['pagename'], $wp->query_vars['name']);
+            }
+        }
+        // === end hard fix ===
 
         if ($lang && self::is_product_path($path)) {
             $slug = trim(substr($path, strlen('urun/')), '/');
