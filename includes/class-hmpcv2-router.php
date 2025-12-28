@@ -243,24 +243,22 @@ class HMPCv2_Router {
             return $query_vars;
         }
 
-        // PRODUCT ROUTE FIX (HARD):
-        // /<lang>/urun/<slug> must not rely on url_to_postid(). Resolve directly from DB.
+        // PRODUCT ROUTE FIX (DETERMINISTIC):
+        // /<lang>/urun/<slug> must resolve to product even if url_to_postid fails.
         if (self::is_product_path($path)) {
             $slug = trim(substr($path, strlen('urun/')), '/');
             if ($slug !== '') {
                 $slug = urldecode($slug);
 
-                // Resolve product directly by slug (post_name)
+                // Try resolve by slug first (most stable)
                 $product = get_page_by_path($slug, OBJECT, 'product');
                 if ($product && !empty($product->ID)) {
                     $post_id = (int) $product->ID;
 
-                    // If translation exists for requested language, force translated product ID
+                    // If translation exists, map to translated product ID
                     if (class_exists('HMPCv2_Resolver')) {
                         $translated_id = (int) HMPCv2_Resolver::resolve_translation_post_id($post_id, $lang);
-                        if ($translated_id > 0) {
-                            $post_id = $translated_id;
-                        }
+                        if ($translated_id > 0) $post_id = $translated_id;
                     }
 
                     return array(
@@ -578,40 +576,11 @@ class HMPCv2_Router {
         $lang = isset($wp->query_vars[self::QV_LANG]) ? (string) $wp->query_vars[self::QV_LANG] : '';
         $path = isset($wp->query_vars[self::QV_PATH]) ? (string) $wp->query_vars[self::QV_PATH] : '';
 
-        // === HMPCv2: Product slug fallback resolver (hard fix) ===
-        $request_uri = isset($_SERVER['REQUEST_URI']) ? (string) $_SERVER['REQUEST_URI'] : '';
-        $path_only   = $request_uri ? wp_parse_url($request_uri, PHP_URL_PATH) : '';
-        $path_only   = is_string($path_only) ? trim($path_only) : '';
-        if ($path_only !== '' && preg_match('#^/([a-z]{2})/urun/([^/]+)/?$#i', $path_only, $m)) {
-            $lang = strtolower($m[1]);
-            $slug = sanitize_title($m[2]);
-
-            // First try: your existing default-language url_to_postid strategy
-            $try = '/urun/' . $slug . '/';
-            $id  = url_to_postid($try);
-
-            // Fallback: resolve directly from DB by product slug (post_name)
-            if (!$id) {
-                $p = get_page_by_path($slug, OBJECT, 'product');
-                if ($p && !empty($p->ID)) {
-                    $id = (int) $p->ID;
-                }
-            }
-
-            // If resolved, force single product query vars
-            if ($id && get_post_type($id) === 'product') {
-                $wp->query_vars['post_type']   = 'product';
-                $wp->query_vars['p']           = (int) $id;
-
-                // Keep language context for switcher/resolver
-                $wp->query_vars['hmpcv2_lang'] = $lang;
-                $wp->query_vars['hmpcv2_path'] = 'urun/' . $slug;
-
-                // Safety: clear conflicting vars that could push WP to page/singular mismatch
-                unset($wp->query_vars['page_id'], $wp->query_vars['pagename'], $wp->query_vars['name']);
-            }
+        // If this is a prefixed product route, do NOT do extra parsing here.
+        // The request filter (map_lang_prefixed_request) is the single source of truth.
+        if (!empty($lang) && self::is_product_path($path)) {
+            return;
         }
-        // === end hard fix ===
 
         if ($lang && self::is_product_path($path)) {
             $slug = trim(substr($path, strlen('urun/')), '/');
