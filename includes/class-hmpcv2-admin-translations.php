@@ -153,22 +153,38 @@ final class HMPCv2_Admin_Translations {
         $enabled = HMPCv2_Langs::enabled_langs();
         $default = HMPCv2_Langs::default_lang();
 
+        // Public post types (exclude attachments) for broad search (pages incl. front page).
+        $public_types = get_post_types(array('public' => true), 'names');
+        if (isset($public_types['attachment'])) unset($public_types['attachment']);
+
         $posts = array();
         $seen = array();
 
-        // Direct ID lookup
+        // Direct ID lookup (include any status except trash)
         $maybe_id = absint($q);
         if ($maybe_id) {
             $direct = get_post($maybe_id);
-            if ($direct && $direct->ID) {
+            if ($direct && $direct->ID && get_post_status($direct->ID) !== 'trash') {
                 $posts[] = $direct;
                 $seen[$direct->ID] = true;
             }
         }
 
+        // If search is empty, include the Front Page as a guaranteed item.
+        if ($q === '') {
+            $front_id = (int)get_option('page_on_front');
+            if ($front_id > 0 && empty($seen[$front_id])) {
+                $front = get_post($front_id);
+                if ($front && $front->ID && get_post_status($front->ID) !== 'trash') {
+                    $posts[] = $front;
+                    $seen[$front->ID] = true;
+                }
+            }
+        }
+
         // Slug / path lookup
         if ($q && preg_match('/^[a-z0-9-]+$/i', $q)) {
-            $by_path = get_page_by_path($q, OBJECT, array('any'));
+            $by_path = get_page_by_path($q, OBJECT, $public_types);
             if ($by_path && $by_path->ID && empty($seen[$by_path->ID])) {
                 $posts[] = $by_path;
                 $seen[$by_path->ID] = true;
@@ -177,8 +193,8 @@ final class HMPCv2_Admin_Translations {
 
         // General search
         $args = array(
-            'post_type' => 'any',
-            'post_status' => array('publish', 'draft', 'private'),
+            'post_type' => $public_types,
+            'post_status' => array('publish', 'draft', 'private', 'pending', 'future', 'inherit'),
             'posts_per_page' => 20,
             's' => $q,
             'no_found_rows' => true,
@@ -223,7 +239,7 @@ final class HMPCv2_Admin_Translations {
         if (!wp_verify_nonce($nonce, 'hmpcv2_admin_nonce')) wp_send_json_error(array('message' => 'bad_nonce'), 400);
 
         $page = isset($_POST['page']) ? max(1, absint($_POST['page'])) : 1;
-        $only_grouped = isset($_POST['only_grouped']) ? absint($_POST['only_grouped']) : 1; // default ON
+        $only_grouped = isset($_POST['only_grouped']) ? absint($_POST['only_grouped']) : 0; // default OFF (show all pages)
         $per_page = 50;
 
         $enabled = HMPCv2_Langs::enabled_langs();
@@ -239,6 +255,17 @@ final class HMPCv2_Admin_Translations {
             'no_found_rows' => false,
             'fields' => 'ids',
         ));
+
+        // Ensure the Front Page is always visible on the first page of results.
+        if ($page === 1) {
+            $front_id = (int)get_option('page_on_front');
+            if ($front_id > 0) {
+                $ids = is_array($q->posts) ? $q->posts : array();
+                if (!in_array($front_id, $ids, true)) {
+                    array_unshift($q->posts, $front_id);
+                }
+            }
+        }
 
         $items = array();
         if ($q->have_posts()) {
