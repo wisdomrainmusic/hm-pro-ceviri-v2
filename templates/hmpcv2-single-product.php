@@ -1,27 +1,32 @@
 <?php
 /**
- * HMPCv2 Single Product Wrapper
- * Purpose: render Woo single product with normal theme header/footer (NOT header-shop).
+ * HMPCv2 Single Product Wrapper (Astra-safe)
+ * Renders prefixed product pages with the same structural wrappers Astra expects.
  */
 if (!defined('ABSPATH')) exit;
 
+// Ensure global post is set.
+global $post;
+
+// Normal theme header (NOT shop header)
 get_header();
 
-// Astra wrapper aç
+// Astra expects these wrappers for layout/container.
 if (function_exists('astra_primary_content_top')) {
     astra_primary_content_top();
 }
 
-// Astra container / primary wrapper (çok kritik)
-echo '<div id="primary" class="content-area">';
+// Match Astra's main content structure.
+echo '<div id="primary" class="content-area primary">';
 echo '<main id="main" class="site-main">';
 
+// Woo hooks + content.
 do_action('woocommerce_before_main_content');
 
 if (function_exists('woocommerce_content')) {
     woocommerce_content();
 } else {
-    // Fallback: if Woo not loaded for some reason.
+    // Fallback
     while (have_posts()) {
         the_post();
         the_content();
@@ -33,7 +38,6 @@ do_action('woocommerce_after_main_content');
 echo '</main>';
 echo '</div>';
 
-// Astra wrapper kapa
 if (function_exists('astra_primary_content_bottom')) {
     astra_primary_content_bottom();
 }

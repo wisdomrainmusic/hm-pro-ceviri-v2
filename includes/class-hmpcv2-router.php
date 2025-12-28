@@ -130,6 +130,7 @@ class HMPCv2_Router {
         add_action('wp', array(__CLASS__, 'ensure_non_404_for_resolved_objects'), 0);
         add_filter('template_include', array(__CLASS__, 'force_hmpcv2_product_wrapper_template'), 1);
         add_filter('template_include', array(__CLASS__, 'force_single_product_template'), 1);
+        add_filter('body_class', array(__CLASS__, 'body_class_force_product'), 20);
 
         // IMPORTANT: Router behavior must be FRONTEND-only
         if (is_admin()) {
@@ -820,5 +821,26 @@ class HMPCv2_Router {
         }
 
         return $template;
+    }
+
+    public static function body_class_force_product($classes) {
+        if (is_admin() || wp_doing_ajax()) return $classes;
+
+        if (empty($_SERVER['REQUEST_URI'])) return $classes;
+        $path = (string) parse_url((string) $_SERVER['REQUEST_URI'], PHP_URL_PATH);
+        $path = '/' . ltrim($path, '/');
+
+        if (!preg_match('#^/([a-z]{2})/urun/#i', $path)) return $classes;
+
+        $qid = function_exists('get_queried_object_id') ? (int) get_queried_object_id() : 0;
+        if ($qid > 0 && get_post_type($qid) === 'product') {
+            // Ensure key Woo/Astra selectors exist
+            $classes[] = 'woocommerce';
+            $classes[] = 'woocommerce-page';
+            $classes[] = 'single-product';
+            $classes[] = 'single';
+        }
+
+        return array_values(array_unique($classes));
     }
 }
