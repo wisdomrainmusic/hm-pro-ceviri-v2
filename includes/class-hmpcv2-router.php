@@ -243,6 +243,36 @@ class HMPCv2_Router {
             return $query_vars;
         }
 
+        // PRODUCT ROUTE FIX (HARD):
+        // /<lang>/urun/<slug> must not rely on url_to_postid(). Resolve directly from DB.
+        if (self::is_product_path($path)) {
+            $slug = trim(substr($path, strlen('urun/')), '/');
+            if ($slug !== '') {
+                // Try exact product by slug (no sanitize_title to avoid mismatches)
+                $slug = urldecode($slug);
+                $product = get_page_by_path($slug, OBJECT, 'product');
+                if ($product && !empty($product->ID)) {
+                    $post_id = (int) $product->ID;
+
+                    // If translation exists for requested language, force translated product ID
+                    if (class_exists('HMPCv2_Resolver')) {
+                        $translated_id = (int) HMPCv2_Resolver::resolve_translation_post_id($post_id, $lang);
+                        if ($translated_id > 0) {
+                            $post_id = $translated_id;
+                        }
+                    }
+
+                    // Force single product query
+                    return array(
+                        'post_type'   => 'product',
+                        'p'           => $post_id,
+                        self::QV_LANG => $lang,
+                        self::QV_PATH => $path,
+                    );
+                }
+            }
+        }
+
         // Guard: language must be enabled
         $enabled = HMPCv2_Langs::enabled_langs();
         if (!in_array($lang, $enabled, true)) {
