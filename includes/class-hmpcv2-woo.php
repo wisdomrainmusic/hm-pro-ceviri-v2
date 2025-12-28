@@ -230,18 +230,43 @@ final class HMPCv2_Woo {
 		return $tr !== '' ? $tr : $short;
 	}
 
-	public static function filter_attribute_label($label, $name, $product) {
+	public static function filter_attribute_label($label, $name, $maybe_product) {
 		if (is_admin()) return $label;
 		if (!is_singular('product')) return $label;
 
 		$lang = self::current_lang_non_default();
 		if ($lang === '') return $label;
 
-		$post_id = (int) $product->get_id();
+		// Woo sometimes passes taxonomy string instead of product object.
+		$resolved_product = null;
+
+		if (is_object($maybe_product) && method_exists($maybe_product, 'get_id')) {
+			$resolved_product = $maybe_product;
+		} else {
+			// Fallback: try global product, then queried object
+			if (function_exists('wc_get_product')) {
+				global $product;
+				$global_product = $product;
+				if (is_object($global_product) && method_exists($global_product, 'get_id')) {
+					$resolved_product = $global_product;
+				} else {
+					$qid = function_exists('get_queried_object_id') ? (int) get_queried_object_id() : 0;
+					if ($qid > 0) {
+						$p = wc_get_product($qid);
+						if (is_object($p) && method_exists($p, 'get_id')) {
+							$resolved_product = $p;
+						}
+					}
+				}
+			}
+		}
+
+		if (!$resolved_product) return $label;
+
+		$post_id = (int) $resolved_product->get_id();
 		$map = get_post_meta($post_id, self::k($lang, 'attr_labels'), true);
 		if (!is_array($map)) return $label;
 
-		// Try match by current label (e.g., "Beden") or by raw name
 		if (isset($map[$label])) return $map[$label];
 		if (is_string($name) && isset($map[$name])) return $map[$name];
 
