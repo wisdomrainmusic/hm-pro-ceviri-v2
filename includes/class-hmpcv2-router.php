@@ -92,6 +92,7 @@ class HMPCv2_Router {
 
         // SAFETY NET: if /<lang>/urun/<slug> falls into 404, rescue it.
         add_action('template_redirect', array(__CLASS__, 'rescue_404_prefixed_product'), 0);
+        add_action('template_redirect', array(__CLASS__, 'disable_canonical_on_prefixed_product'), 0);
 
         add_action('parse_request', array(__CLASS__, 'parse_request_lang'), 1);
         add_action('template_redirect', array(__CLASS__, 'canonical_redirect_default_prefix'), 1);
@@ -669,6 +670,10 @@ class HMPCv2_Router {
             return;
         }
 
+        if (headers_sent()) {
+            return;
+        }
+
         $lang = HMPCv2_Langs::get_current_language();
         if (!$lang) return;
 
@@ -681,6 +686,18 @@ class HMPCv2_Router {
 
         setcookie('hmpcv2_lang', $lang, $expire, COOKIEPATH ?: '/', COOKIE_DOMAIN, is_ssl(), true);
         $_COOKIE['hmpcv2_lang'] = $lang;
+    }
+
+    public static function disable_canonical_on_prefixed_product() {
+        if (is_admin() || wp_doing_ajax()) return;
+
+        $uri = isset($_SERVER['REQUEST_URI']) ? (string) $_SERVER['REQUEST_URI'] : '';
+        $path = $uri ? (string) parse_url($uri, PHP_URL_PATH) : '';
+        if (!$path) return;
+
+        if (preg_match('#^/([a-z]{2})/urun/#i', $path)) {
+            remove_action('template_redirect', 'redirect_canonical');
+        }
     }
 
     public static function parse_request_lang_prefixed($wp) {
