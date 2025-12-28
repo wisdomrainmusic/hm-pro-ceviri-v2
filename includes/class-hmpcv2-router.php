@@ -13,55 +13,7 @@ class HMPCv2_Router {
         return (strpos($p, 'urun/') === 0);
     }
 
-    private static function should_debug_request() {
-        if (empty($_SERVER['REQUEST_URI'])) {
-            return false;
-        }
-        $path = (string) parse_url((string) $_SERVER['REQUEST_URI'], PHP_URL_PATH);
-        $path = '/' . ltrim($path, '/');
-        return (bool) preg_match('#^/([a-z]{2})/urun/#i', $path);
-    }
-
-    private static function debug_log($hook, $extra = array()) {
-        if (!self::should_debug_request()) {
-            return;
-        }
-
-        $template = isset($extra['template']) ? (string) $extra['template'] : '';
-
-        $qid = function_exists('get_queried_object_id') ? (int) get_queried_object_id() : 0;
-        $is_404 = function_exists('is_404') && is_404() ? 1 : 0;
-
-        $qv = array();
-        if (isset($extra['query_vars']) && is_array($extra['query_vars'])) {
-            $qv = $extra['query_vars'];
-        } elseif (isset($GLOBALS['wp_query']) && is_object($GLOBALS['wp_query'])) {
-            $qv = (array) $GLOBALS['wp_query']->query_vars;
-        }
-
-        $line = sprintf(
-            '[%s] hook=%s uri=%s is_404=%d qid=%d post_type=%s p=%s page_id=%s pagename=%s template=%s',
-            date('Y-m-d H:i:s'),
-            (string) $hook,
-            (string) ($_SERVER['REQUEST_URI'] ?? ''),
-            $is_404,
-            $qid,
-            isset($qv['post_type']) ? (is_array($qv['post_type']) ? implode(',', $qv['post_type']) : (string) $qv['post_type']) : '',
-            isset($qv['p']) ? (string) $qv['p'] : '',
-            isset($qv['page_id']) ? (string) $qv['page_id'] : '',
-            isset($qv['pagename']) ? (string) $qv['pagename'] : '',
-            $template
-        );
-
-        $log_path = trailingslashit(WP_CONTENT_DIR) . 'hmpcv2-router-debug.log';
-        if (file_exists($log_path) && filesize($log_path) > 2 * 1024 * 1024) {
-            @unlink($log_path);
-        }
-        @file_put_contents($log_path, $line . PHP_EOL, FILE_APPEND);
-    }
-
     public static function rescue_404_prefixed_product() {
-        self::debug_log('template_redirect:rescue_404_prefixed_product');
         if (is_admin() || wp_doing_ajax()) {
             return;
         }
@@ -128,8 +80,6 @@ class HMPCv2_Router {
         add_action('pre_get_posts', array(__CLASS__, 'force_product_single_for_prefixed_urun'), -1);
         add_action('pre_get_posts', array(__CLASS__, 'force_front_page_for_lang_root'), 0);
         add_action('wp', array(__CLASS__, 'ensure_non_404_for_resolved_objects'), 0);
-        add_filter('template_include', array(__CLASS__, 'force_hmpcv2_product_wrapper_template'), 1);
-        add_filter('template_include', array(__CLASS__, 'force_single_product_template'), 1);
         add_filter('body_class', array(__CLASS__, 'body_class_force_product'), 20);
 
         // IMPORTANT: Router behavior must be FRONTEND-only
@@ -280,7 +230,6 @@ class HMPCv2_Router {
     }
 
     public static function map_lang_prefixed_request($query_vars) {
-        self::debug_log('request:map_lang_prefixed_request', array('query_vars' => $query_vars));
         if (empty($query_vars[self::QV_LANG]) || !isset($query_vars[self::QV_PATH])) {
             return $query_vars;
         }
@@ -376,7 +325,6 @@ class HMPCv2_Router {
      * If we have a valid resolved product under a language prefix, force proper flags and 200.
      */
     public static function ensure_non_404_for_resolved_objects() {
-        self::debug_log('wp:ensure_non_404_for_resolved_objects');
         global $wp_query;
         if (!is_object($wp_query)) return;
 
@@ -460,7 +408,6 @@ class HMPCv2_Router {
     }
 
     public static function force_front_page_for_lang_root($q) {
-        self::debug_log('pre_get_posts:force_front_page_for_lang_root');
         if (is_admin() || !$q->is_main_query()) return;
 
         $lang = $q->get(self::QV_LANG);
@@ -503,7 +450,6 @@ class HMPCv2_Router {
     }
 
     public static function force_product_single_for_prefixed_urun($q) {
-        self::debug_log('pre_get_posts:force_product_single_for_prefixed_urun');
         if (is_admin() || !$q->is_main_query()) return;
 
         // Raw URI check (query_vars'a güvenmiyoruz)
@@ -629,7 +575,6 @@ class HMPCv2_Router {
     }
 
     public static function canonical_redirect_default_prefix() {
-        self::debug_log('template_redirect:canonical_redirect_default_prefix');
         if (is_admin()) return;
 
         if (HMPCv2_Options::get('prefix_default_lang', false)) {
@@ -691,7 +636,6 @@ class HMPCv2_Router {
     }
 
     public static function parse_request_lang_prefixed($wp) {
-        self::debug_log('parse_request:parse_request_lang_prefixed');
         if (is_admin()) return;
         if (empty($wp) || !isset($wp->request)) return;
 
@@ -766,61 +710,6 @@ class HMPCv2_Router {
             $wp->query_vars[self::QV_LANG] = $lang;
             $wp->query_vars[self::QV_PATH] = implode('/', array_slice($parts, 1));
         }
-    }
-
-    public static function force_single_product_template($template) {
-        self::debug_log('template_include', array('template' => $template));
-        if (is_admin() || wp_doing_ajax()) {
-            return $template;
-        }
-
-        // Only our problematic prefixed product URLs.
-        if (empty($_SERVER['REQUEST_URI'])) {
-            return $template;
-        }
-        $path = (string) parse_url((string) $_SERVER['REQUEST_URI'], PHP_URL_PATH);
-        $path = '/' . ltrim($path, '/');
-        if (!preg_match('#^/([a-z]{2})/urun/#i', $path)) {
-            return $template;
-        }
-
-        // If WP resolved a product, force Woo single-product template loader.
-        if (function_exists('is_singular') && is_singular('product')) {
-            if (function_exists('wc_locate_template')) {
-                $woo = wc_locate_template('single-product.php');
-                if ($woo && file_exists($woo)) {
-                    return $woo;
-                }
-            }
-            // Fallback: if Woo can't locate, keep current template.
-        }
-
-        return $template;
-    }
-
-    public static function force_hmpcv2_product_wrapper_template($template) {
-        if (is_admin() || wp_doing_ajax()) return $template;
-
-        if (empty($_SERVER['REQUEST_URI'])) return $template;
-        $path = (string) parse_url((string) $_SERVER['REQUEST_URI'], PHP_URL_PATH);
-        $path = '/' . ltrim($path, '/');
-
-        // all langs: /{lang}/urun/...
-        if (!preg_match('#^/([a-z]{2})/urun/#i', $path)) return $template;
-
-        $qid = function_exists('get_queried_object_id') ? (int) get_queried_object_id() : 0;
-        if ($qid <= 0) return $template;
-        if (get_post_type($qid) !== 'product') return $template;
-
-        // Use plugin wrapper template (normal get_header/get_footer)
-        $wrapper = trailingslashit(plugin_dir_path(__FILE__)) . '../templates/hmpcv2-single-product.php';
-        $wrapper = wp_normalize_path($wrapper);
-
-        if (file_exists($wrapper)) {
-            return $wrapper;
-        }
-
-        return $template;
     }
 
     public static function body_class_force_product($classes) {
