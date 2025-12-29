@@ -52,21 +52,25 @@ final class HMPCv2_Woo {
 
 	private static function is_on_woo_core_page(): bool {
 		if (is_admin()) return false;
-		$qid = (int) get_queried_object_id();
-		if ($qid <= 0) return false;
-		return self::is_woo_core_page_id($qid);
+
+		// Woo conditional tags (DOĞRU YÖNTEM)
+		if (function_exists('is_cart') && is_cart()) return true;
+		if (function_exists('is_checkout') && is_checkout()) return true;
+		if (function_exists('is_account_page') && is_account_page()) return true;
+		if (function_exists('is_shop') && is_shop()) return true;
+
+		return false;
 	}
 
 	private static function current_lang_code(): string {
-		if (class_exists('HMPCV2_Lang')) {
-			$l = HMPCV2_Lang::current();
-			return is_string($l) ? strtolower($l) : '';
+		$uri = $_SERVER['REQUEST_URI'] ?? '';
+
+		if (preg_match('#^/([a-z]{2})(/|$)#i', $uri, $m)) {
+			return strtolower($m[1]);
 		}
-		if (function_exists('hmpcv2_current_lang')) {
-			$l = hmpcv2_current_lang();
-			return is_string($l) ? strtolower($l) : '';
-		}
-		return '';
+
+		// fallback → varsayılan dil
+		return 'tr';
 	}
 
 	private static function woo_dict(): array {
@@ -387,13 +391,13 @@ final class HMPCv2_Woo {
 	}
 
 	public static function woo_gettext_override($translation, $text, $domain) {
+		$lang = self::current_lang_code();
 		if ($domain === 'woocommerce') {
-			error_log('[HMPCv2][woo_gettext] qid=' . (int)get_queried_object_id() . ' lang=' . self::current_lang_code() . ' text=' . $text . ' translation=' . $translation);
+			error_log('[HMPCv2][woo_gettext] lang=' . $lang . ' text=' . $text);
 		}
 		if ($domain !== 'woocommerce') return $translation;
 		if (!self::is_on_woo_core_page()) return $translation;
 
-		$lang = self::current_lang_code();
 		if ($lang === '') return $translation;
 
 		$dict = self::woo_dict();
