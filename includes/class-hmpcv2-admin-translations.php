@@ -650,8 +650,8 @@ final class HMPCv2_Admin_Translations {
 
             $added_total = 0;
             foreach ($langs_to_seed as $L) {
-                if (!isset($misc[$L])) $misc[$L] = array();
-                if (!isset($misc[$L]['checkout'])) $misc[$L]['checkout'] = array();
+                if (!isset($misc[$L]) || !is_array($misc[$L])) $misc[$L] = array();
+                if (!isset($misc[$L]['checkout']) || !is_array($misc[$L]['checkout'])) $misc[$L]['checkout'] = array();
 
                 foreach ((array) $set['strings'] as $k => $v_en) {
                     if (!isset($misc[$L]['checkout'][$k]) || $misc[$L]['checkout'][$k] === '') {
