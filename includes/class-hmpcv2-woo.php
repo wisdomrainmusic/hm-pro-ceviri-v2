@@ -20,6 +20,10 @@ final class HMPCv2_Woo {
 		// Attribute label/value translation (display layer)
 		add_filter('woocommerce_attribute_label', array(__CLASS__, 'filter_attribute_label'), 20, 3);
 		add_filter('woocommerce_display_product_attributes', array(__CLASS__, 'filter_display_attributes'), 20, 2);
+
+		// Woo core gettext overrides
+		add_filter('gettext', array(__CLASS__, 'woo_gettext_override'), 10, 3);
+		add_filter('gettext_with_context', array(__CLASS__, 'woo_gettext_with_context_override'), 10, 4);
 	}
 
 	// ---------- Meta keys ----------
@@ -44,6 +48,41 @@ final class HMPCv2_Woo {
 
 	private static function is_woo_core_page_id(int $page_id): bool {
 		return in_array($page_id, self::woo_core_page_ids(), true);
+	}
+
+	private static function is_on_woo_core_page(): bool {
+		if (is_admin()) return false;
+		$qid = (int) get_queried_object_id();
+		if ($qid <= 0) return false;
+		return self::is_woo_core_page_id($qid);
+	}
+
+	private static function current_lang_code(): string {
+		if (class_exists('HMPCV2_Lang')) {
+			$l = HMPCV2_Lang::current();
+			return is_string($l) ? strtolower($l) : '';
+		}
+		if (function_exists('hmpcv2_current_lang')) {
+			$l = hmpcv2_current_lang();
+			return is_string($l) ? strtolower($l) : '';
+		}
+		return '';
+	}
+
+	private static function woo_dict(): array {
+		static $cache = null;
+		if ($cache !== null) return $cache;
+		$dict = get_option('hmpcv2_woo_dict', array());
+		$cache = is_array($dict) ? $dict : array();
+		return $cache;
+	}
+
+	private static function dict_key_simple(string $text): string {
+		return 's:' . $text;
+	}
+
+	private static function dict_key_context(string $context, string $text): string {
+		return 'c:' . $context . "\x1F" . $text;
 	}
 
 	// ---------- Admin ----------
@@ -345,6 +384,42 @@ final class HMPCv2_Woo {
 		}
 
 		return $attributes;
+	}
+
+	public static function woo_gettext_override($translation, $text, $domain) {
+		if ($domain !== 'woocommerce') return $translation;
+		if (!self::is_on_woo_core_page()) return $translation;
+
+		$lang = self::current_lang_code();
+		if ($lang === '') return $translation;
+
+		$dict = self::woo_dict();
+		$key = self::dict_key_simple((string) $text);
+
+		if (isset($dict[$lang]) && isset($dict[$lang][$domain]) && isset($dict[$lang][$domain][$key])) {
+			$t = (string) $dict[$lang][$domain][$key];
+			if ($t !== '') return $t;
+		}
+
+		return $translation;
+	}
+
+	public static function woo_gettext_with_context_override($translation, $text, $context, $domain) {
+		if ($domain !== 'woocommerce') return $translation;
+		if (!self::is_on_woo_core_page()) return $translation;
+
+		$lang = self::current_lang_code();
+		if ($lang === '') return $translation;
+
+		$dict = self::woo_dict();
+		$key = self::dict_key_context((string) $context, (string) $text);
+
+		if (isset($dict[$lang]) && isset($dict[$lang][$domain]) && isset($dict[$lang][$domain][$key])) {
+			$t = (string) $dict[$lang][$domain][$key];
+			if ($t !== '') return $t;
+		}
+
+		return $translation;
 	}
 
 	public static function debug_footer_comment() {
