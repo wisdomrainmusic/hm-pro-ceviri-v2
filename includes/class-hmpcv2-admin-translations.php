@@ -7,6 +7,7 @@ final class HMPCv2_Admin_Translations {
         add_action('admin_menu', array(__CLASS__, 'menu'), 20);
 
         add_action('admin_enqueue_scripts', array(__CLASS__, 'enqueue'));
+        self::register_ajax_hooks();
         add_action('wp_ajax_hmpcv2_search_posts', array(__CLASS__, 'ajax_search_posts'));
         add_action('wp_ajax_hmpcv2_search_content', array(__CLASS__, 'ajax_search_content'));
         add_action('wp_ajax_hmpcv2_create_translation', array(__CLASS__, 'ajax_create_translation'));
@@ -17,6 +18,11 @@ final class HMPCv2_Admin_Translations {
         add_action('wp_ajax_hmpcv2_complete_save', array(__CLASS__, 'ajax_complete_save'));
         add_action('wp_ajax_hmpcv2_style_save', array(__CLASS__, 'ajax_style_save'));
         add_action('wp_ajax_hmpcv2_list_pages', array(__CLASS__, 'ajax_list_pages'));
+    }
+
+    public static function register_ajax_hooks() {
+        add_action('wp_ajax_hmpcv2_get_woo_page_title', array(__CLASS__, 'ajax_get_woo_page_title'));
+        add_action('wp_ajax_hmpcv2_save_woo_page_title', array(__CLASS__, 'ajax_save_woo_page_title'));
     }
 
     public static function menu() {
@@ -140,6 +146,84 @@ final class HMPCv2_Admin_Translations {
         }
 
         wp_send_json_success(array('items' => $out));
+    }
+
+    private static function hmpcv2_get_woo_core_page_ids(): array {
+        $page_ids = array(
+            (int) get_option('woocommerce_shop_page_id'),
+            (int) get_option('woocommerce_cart_page_id'),
+            (int) get_option('woocommerce_checkout_page_id'),
+            (int) get_option('woocommerce_myaccount_page_id'),
+        );
+
+        $page_ids = array_values(array_unique(array_filter($page_ids, function($page_id) {
+            return (int) $page_id > 0;
+        })));
+
+        return $page_ids;
+    }
+
+    private static function hmpcv2_is_woo_core_page_id(int $page_id): bool {
+        return in_array($page_id, self::hmpcv2_get_woo_core_page_ids(), true);
+    }
+
+    private static function hmpcv2_sanitize_lang(string $lang): string {
+        $lang = strtolower($lang);
+        $lang = preg_replace('/[^a-z0-9_-]/', '', $lang);
+        return $lang ? $lang : '';
+    }
+
+    public static function ajax_get_woo_page_title() {
+        check_ajax_referer('hmpcv2_admin_nonce', 'nonce');
+        if (!current_user_can('edit_pages')) wp_send_json_error(array('message' => 'forbidden'), 403);
+
+        $page_id = isset($_POST['page_id']) ? absint($_POST['page_id']) : 0;
+        $lang = isset($_POST['lang']) ? self::hmpcv2_sanitize_lang((string) $_POST['lang']) : '';
+
+        if (!$page_id || !self::hmpcv2_is_woo_core_page_id($page_id)) {
+            wp_send_json_error(array('message' => 'bad_page'), 400);
+        }
+
+        if ($lang === '') {
+            wp_send_json_error(array('message' => 'bad_lang'), 400);
+        }
+
+        $meta_key = '_hmpcv2_title_' . $lang;
+        $title = (string) get_post_meta($page_id, $meta_key, true);
+
+        wp_send_json_success(array(
+            'page_id' => $page_id,
+            'lang' => $lang,
+            'title' => $title,
+        ));
+    }
+
+    public static function ajax_save_woo_page_title() {
+        check_ajax_referer('hmpcv2_admin_nonce', 'nonce');
+        if (!current_user_can('edit_pages')) wp_send_json_error(array('message' => 'forbidden'), 403);
+
+        $page_id = isset($_POST['page_id']) ? absint($_POST['page_id']) : 0;
+        $lang = isset($_POST['lang']) ? self::hmpcv2_sanitize_lang((string) $_POST['lang']) : '';
+        $title = isset($_POST['title']) ? (string) $_POST['title'] : '';
+
+        if (!$page_id || !self::hmpcv2_is_woo_core_page_id($page_id)) {
+            wp_send_json_error(array('message' => 'bad_page'), 400);
+        }
+
+        if ($lang === '') {
+            wp_send_json_error(array('message' => 'bad_lang'), 400);
+        }
+
+        $meta_key = '_hmpcv2_title_' . $lang;
+        $title = trim(wp_strip_all_tags($title));
+
+        if ($title === '') {
+            delete_post_meta($page_id, $meta_key);
+        } else {
+            update_post_meta($page_id, $meta_key, $title);
+        }
+
+        wp_send_json_success(array('saved' => true));
     }
 
     public static function ajax_search_content() {
@@ -625,7 +709,9 @@ final class HMPCv2_Admin_Translations {
                 $group = self::prepare_group_map($item['id'], $enabled);
                 $base_title = get_the_title($item['id']);
                 $edit = get_edit_post_link($item['id'], '');
-                echo '<div class="hmpcv2-card hmpcv2-suggested" data-post="' . esc_attr($item['id']) . '" data-group="' . esc_attr(isset($group['group']) ? $group['group'] : '') . '">';
+                $suggested_type = isset($item['type']) ? (string) $item['type'] : '';
+                $woo_key = isset($item['woo_key']) ? (string) $item['woo_key'] : '';
+                echo '<div class="hmpcv2-card hmpcv2-suggested" data-post="' . esc_attr($item['id']) . '" data-group="' . esc_attr(isset($group['group']) ? $group['group'] : '') . '" data-suggested-type="' . esc_attr($suggested_type) . '"' . ($woo_key ? ' data-woo-key="' . esc_attr($woo_key) . '"' : '') . '>';
                 echo '<div class="hmpcv2-flex">';
                 echo '<div style="flex:2;">';
                 echo '<strong>' . esc_html($item['label']) . '</strong><br />';
@@ -863,24 +949,50 @@ final class HMPCv2_Admin_Translations {
 
         $front = (int)get_option('page_on_front');
         if ($front > 0 && get_post($front)) {
-            $suggested[] = array('id' => $front, 'label' => 'Front Page');
+            $suggested[] = array(
+                'id' => $front,
+                'label' => 'Front Page',
+                'type' => 'wp_page',
+            );
         }
 
         $posts_page = (int)get_option('page_for_posts');
         if ($posts_page > 0 && get_post($posts_page)) {
-            $suggested[] = array('id' => $posts_page, 'label' => 'Posts Page');
+            $suggested[] = array(
+                'id' => $posts_page,
+                'label' => 'Posts Page',
+                'type' => 'wp_page',
+            );
         }
 
         $woo_pages = array(
-            'Shop' => (int)get_option('woocommerce_shop_page_id'),
-            'Cart' => (int)get_option('woocommerce_cart_page_id'),
-            'Checkout' => (int)get_option('woocommerce_checkout_page_id'),
-            'My Account' => (int)get_option('woocommerce_myaccount_page_id'),
+            'shop' => array(
+                'label' => 'Shop',
+                'id' => (int)get_option('woocommerce_shop_page_id'),
+            ),
+            'cart' => array(
+                'label' => 'Cart',
+                'id' => (int)get_option('woocommerce_cart_page_id'),
+            ),
+            'checkout' => array(
+                'label' => 'Checkout',
+                'id' => (int)get_option('woocommerce_checkout_page_id'),
+            ),
+            'myaccount' => array(
+                'label' => 'My Account',
+                'id' => (int)get_option('woocommerce_myaccount_page_id'),
+            ),
         );
 
-        foreach ($woo_pages as $label => $pid) {
+        foreach ($woo_pages as $woo_key => $data) {
+            $pid = isset($data['id']) ? (int) $data['id'] : 0;
             if ($pid > 0 && get_post($pid)) {
-                $suggested[] = array('id' => $pid, 'label' => $label . ' Page');
+                $suggested[] = array(
+                    'id' => $pid,
+                    'label' => $data['label'] . ' Page',
+                    'type' => 'woo_core',
+                    'woo_key' => $woo_key,
+                );
             }
         }
 
