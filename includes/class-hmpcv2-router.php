@@ -163,6 +163,10 @@ class HMPCv2_Router {
             return;
         }
 
+        // Keep logo / home URLs inside current language prefix
+        add_filter('get_custom_logo', array(__CLASS__, 'filter_custom_logo_href'), 20);
+        add_filter('home_url', array(__CLASS__, 'filter_home_url_for_lang'), 20, 4);
+
         // SAFETY NET: if /<lang>/urun/<slug> falls into 404, rescue it.
         add_action('template_redirect', array(__CLASS__, 'rescue_404_prefixed_product'), 0);
         add_action('template_redirect', array(__CLASS__, 'disable_canonical_on_prefixed_product'), 0);
@@ -643,6 +647,72 @@ class HMPCv2_Router {
 
     public static function prefix_default_lang() {
         return (bool) HMPCv2_Options::get('prefix_default_lang', false);
+    }
+
+    private static function build_lang_home_url(string $lang): string {
+        $default = HMPCv2_Langs::default_lang();
+        $prefix_default = self::prefix_default_lang();
+
+        $lang = strtolower($lang);
+        if ($lang === $default && !$prefix_default) {
+            return home_url('/');
+        }
+
+        return home_url('/' . $lang . '/');
+    }
+
+    /**
+     * Fix theme logo link (Custom Logo) so it doesn't drop /en/ prefix.
+     */
+    public static function filter_custom_logo_href($html) {
+        if (is_admin() || !is_string($html) || $html === '') return $html;
+
+        $lang = self::current_lang();
+        $target = self::build_lang_home_url($lang);
+
+        // Replace the first anchor href in the logo HTML
+        $pattern = '#<a\s+[^>]*href=(["\'])(.*?)\1#i';
+        $html = preg_replace_callback($pattern, function ($m) use ($target) {
+            $quote = $m[1];
+            return str_replace($m[0], preg_replace('#href=(["\'])(.*?)\1#i', 'href=' . $quote . esc_url($target) . $quote, $m[0]), $m[0]);
+        }, $html, 1);
+
+        // Fallback if callback didn't match (very rare)
+        if (strpos($html, 'href=') !== false) {
+            $html = preg_replace('#href=(["\'])(.*?)\1#i', 'href=$1' . esc_url($target) . '$1', $html, 1);
+        }
+
+        return $html;
+    }
+
+    /**
+     * Conservative home_url() filter:
+     * - Only affects calls requesting root ("/" or "")
+     * - Keeps site inside current language prefix
+     */
+    public static function filter_home_url_for_lang($url, $path, $orig_scheme, $blog_id) {
+        static $in_filter = false;
+        if ($in_filter || is_admin() || wp_doing_ajax()) return $url;
+
+        $path = (string) $path;
+        $path_norm = trim($path);
+
+        // Only rewrite "home root" URLs
+        if ($path_norm !== '' && $path_norm !== '/') {
+            return $url;
+        }
+
+        $in_filter = true;
+        $lang = self::current_lang();
+        $target = self::build_lang_home_url($lang);
+        $in_filter = false;
+
+        // Preserve scheme if WP already provided a specific scheme
+        if (is_string($orig_scheme) && $orig_scheme !== '') {
+            $target = set_url_scheme($target, $orig_scheme);
+        }
+
+        return $target;
     }
 
     protected static function detect_from_request() {
