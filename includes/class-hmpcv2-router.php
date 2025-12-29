@@ -158,6 +158,11 @@ class HMPCv2_Router {
         add_filter('template_include', array(__CLASS__, 'force_woocommerce_single_product_template'), 999);
         add_filter('template_include', array(__CLASS__, 'force_single_product_template_for_prefixed_product'), 99);
 
+        // Sync the internal current language with the URL prefix as early as possible.
+        // This prevents cases where the switcher detects "/en/" via REQUEST_URI, but
+        // internal state still stays on default language (which breaks menu labels/URLs).
+        add_action('init', array(__CLASS__, 'sync_current_language_from_request'), 0);
+
         // IMPORTANT: Router behavior must be FRONTEND-only
         if (is_admin()) {
             return;
@@ -177,6 +182,23 @@ class HMPCv2_Router {
 
         // Remember language in cookie (optional) - frontend only
         add_action('init', array(__CLASS__, 'maybe_set_lang_cookie'), 20);
+    }
+
+    /**
+     * Ensure HMPCv2_Langs::$current_language follows the URL prefix.
+     *
+     * Why: some routing edge-cases (or stale rewrite rules) can result in
+     * hmpcv2_lang query var not being present even when the visitor is on
+     * a prefixed URL like "/en/". The switcher detects the prefix via
+     * REQUEST_URI, but menu translation relies on HMPCv2_Langs::get_current_language().
+     *
+     * This keeps menus (labels + URLs) consistently prefixed.
+     */
+    public static function sync_current_language_from_request() {
+        if (is_admin() || wp_doing_ajax()) return;
+        $lang = self::current_lang();
+        $lang = HMPCv2_Langs::sanitize_lang_code($lang, HMPCv2_Langs::default_lang());
+        HMPCv2_Langs::set_current_language($lang);
     }
 
     public static function add_query_vars($vars) {
@@ -235,7 +257,16 @@ class HMPCv2_Router {
         $path = isset($wp->query_vars[self::QV_PATH]) ? $wp->query_vars[self::QV_PATH] : '';
 
         if (!$has_prefix) {
-            HMPCv2_Langs::set_current_language(HMPCv2_Langs::get_default());
+            // If rewrite rules are stale/missing, WP may not populate hmpcv2_lang,
+            // even though the request URI contains a valid prefix (e.g. /en/...).
+            // In that case, keep language consistent with the URL.
+            $uri_lang = self::detect_lang_from_request_uri();
+            $enabled  = HMPCv2_Langs::enabled_langs();
+            if ($uri_lang !== '' && in_array($uri_lang, $enabled, true)) {
+                HMPCv2_Langs::set_current_language($uri_lang);
+            } else {
+                HMPCv2_Langs::set_current_language(HMPCv2_Langs::get_default());
+            }
             return $wp;
         }
 
