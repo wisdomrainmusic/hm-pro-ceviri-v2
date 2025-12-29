@@ -1,6 +1,91 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
+class HMPCv2_Woo_Presets {
+
+    public static function get_sets() {
+        return array(
+            'woo_cart' => array(
+                'label' => 'Woo Core – Cart',
+                'domains' => array(
+                    'woocommerce' => array(
+                        'Cart',
+                        'Cart totals',
+                        'Coupon code',
+                        'Apply coupon',
+                        'Update cart',
+                        'Proceed to checkout',
+                        'Subtotal',
+                        'Shipping',
+                        'Total',
+                        'Product',
+                        'Price',
+                        'Quantity',
+                        'Remove this item',
+                        'Your cart is currently empty.',
+                        'Return to shop',
+                    ),
+                ),
+            ),
+            'woo_checkout' => array(
+                'label' => 'Woo Core – Checkout',
+                'domains' => array(
+                    'woocommerce' => array(
+                        'Checkout',
+                        'Billing details',
+                        'Additional information',
+                        'Your order',
+                        'Place order',
+                        'Coupon code',
+                        'Apply',
+                        'Subtotal',
+                        'Shipping',
+                        'Total',
+                        'Privacy policy',
+                    ),
+                ),
+            ),
+            'woo_account' => array(
+                'label' => 'Woo Core – My Account',
+                'domains' => array(
+                    'woocommerce' => array(
+                        'My account',
+                        'Dashboard',
+                        'Orders',
+                        'Downloads',
+                        'Addresses',
+                        'Account details',
+                        'Logout',
+                        'Hello %1$s (not %1$s? Log out)',
+                        'From your account dashboard you can view your recent orders, manage your shipping and billing addresses, and edit your password and account details.',
+                        'No order has been made yet.',
+                        'Browse products',
+                    ),
+                ),
+            ),
+            'cartflows_checkout' => array(
+                'label' => 'CartFlows – Checkout',
+                'domains' => array(
+                    'cartflows' => array(
+                        'Contact',
+                        'Payment',
+                        'Coupon Code',
+                        'Apply',
+                        'Place Order',
+                    ),
+                    'cartflows-pro' => array(
+                        'Contact',
+                        'Payment',
+                        'Coupon Code',
+                        'Apply',
+                        'Place Order',
+                    ),
+                ),
+            ),
+        );
+    }
+}
+
 final class HMPCv2_Admin_Translations {
 
     public static function init() {
@@ -26,6 +111,7 @@ final class HMPCv2_Admin_Translations {
         add_action('wp_ajax_hmpcv2_woo_dict_list', array(__CLASS__, 'ajax_woo_dict_list'));
         add_action('wp_ajax_hmpcv2_woo_dict_save', array(__CLASS__, 'ajax_woo_dict_save'));
         add_action('wp_ajax_hmpcv2_woo_dict_delete', array(__CLASS__, 'ajax_woo_dict_delete'));
+        add_action('wp_ajax_hmpcv2_woo_seed_presets', array(__CLASS__, 'ajax_woo_seed_presets'));
     }
 
     public static function menu() {
@@ -410,6 +496,52 @@ final class HMPCv2_Admin_Translations {
         }
 
         wp_send_json_success(array('deleted' => true));
+    }
+
+    public static function ajax_woo_seed_presets() {
+        check_ajax_referer('hmpcv2_admin_nonce', 'nonce');
+        if (!current_user_can('manage_options')) wp_send_json_error(array('message' => 'forbidden'), 403);
+
+        $lang = isset($_POST['lang']) ? self::hmpcv2_sanitize_lang_code((string) $_POST['lang'], '') : '';
+        $preset = isset($_POST['preset']) ? sanitize_text_field((string) $_POST['preset']) : '';
+
+        if ($lang === '' || $preset === '') {
+            wp_send_json_error(array('message' => 'bad_input'), 400);
+        }
+
+        $sets = HMPCv2_Woo_Presets::get_sets();
+
+        if (!isset($sets[$preset])) {
+            wp_send_json_error(array('message' => 'invalid_preset'), 400);
+        }
+
+        $dict = get_option('hmpcv2_woo_dict', array());
+        $dict = is_array($dict) ? $dict : array();
+        $added = 0;
+
+        foreach ($sets[$preset]['domains'] as $domain => $strings) {
+            $domain = sanitize_text_field((string) $domain);
+            if (!isset($dict[$lang][$domain]) || !is_array($dict[$lang][$domain])) {
+                $dict[$lang][$domain] = array();
+            }
+
+            foreach ($strings as $original) {
+                $original = sanitize_text_field((string) $original);
+                if ($original === '') continue;
+                $key = self::hmpcv2_woo_dict_key($original, '');
+                if (!isset($dict[$lang][$domain][$key])) {
+                    $dict[$lang][$domain][$key] = $original;
+                    $added++;
+                }
+            }
+        }
+
+        update_option('hmpcv2_woo_dict', $dict, false);
+
+        wp_send_json_success(array(
+            'added' => $added,
+            'preset' => $preset,
+        ));
     }
 
     public static function ajax_search_content() {
@@ -936,7 +1068,7 @@ final class HMPCv2_Admin_Translations {
         echo '<p>Manage WooCommerce string translations per language and domain.</p>';
         echo '<div class="hmpcv2-card">';
         echo '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">';
-        echo '<label>Language<br><select id="hmpcv2-woo-lang">';
+        echo '<label>Language<br><select id="hmpcv2-language-select">';
         foreach ($supported_langs as $code) {
             $label = isset($lang_labels[$code]) ? $lang_labels[$code] : strtoupper($code);
             echo '<option value="' . esc_attr($code) . '" ' . selected($code, 'en', false) . '>' . esc_html(strtoupper($code) . ' — ' . $label) . '</option>';
@@ -945,9 +1077,19 @@ final class HMPCv2_Admin_Translations {
         echo '<label>Domain<br><select id="hmpcv2-woo-domain">';
         echo '<option value="woocommerce" selected>woocommerce</option>';
         echo '<option value="woocommerce-admin">woocommerce-admin</option>';
+        echo '<option value="cartflows">cartflows</option>';
+        echo '<option value="cartflows-pro">cartflows-pro</option>';
         echo '<option value="default">default</option>';
         echo '</select></label>';
         echo '<label>Search<br><input type="text" id="hmpcv2-woo-search" placeholder="Search strings" style="width:240px;" /></label>';
+        echo '<label>Preset<br><select id="hmpcv2-woo-preset-select">';
+        echo '<option value="">Preset seç</option>';
+        foreach (HMPCv2_Woo_Presets::get_sets() as $key => $preset) {
+            $label = isset($preset['label']) ? (string) $preset['label'] : $key;
+            echo '<option value="' . esc_attr($key) . '">' . esc_html($label) . '</option>';
+        }
+        echo '</select></label>';
+        echo '<button class="button button-primary" type="button" id="hmpcv2-load-woo-preset">Preset Yükle</button>';
         echo '</div>';
         echo '<div id="hmpcv2-woo-results" class="hmpcv2-woo-results"></div>';
         echo '</div>';

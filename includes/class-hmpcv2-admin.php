@@ -177,4 +177,5 @@ class HMPCv2_Admin {
         </p>
         <?php
     }
+
 }
