@@ -186,7 +186,8 @@ jQuery(function ($) {
       action: "hmpcv2_woo_seed_presets",
       nonce: hmpcv2Nonce(),
       lang: lang,
-      preset: preset
+      preset: preset,
+      seed_all: document.getElementById("hmpcv2-seed-all")?.checked ? 1 : 0
     })
       .done(function (res) {
         if (!res || !res.success) {

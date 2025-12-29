@@ -44,15 +44,18 @@ final class HMPCv2_Woo {
 		$lang = self::current_lang_code();
 		if ($lang === '') return $gateways;
 
-		// group: checkout, key: bacs_description / bacs_instructions
+		// group: checkout, key: bacs_title / bacs_description / bacs_instructions
+		$title = self::misc_get($lang, 'checkout', 'bacs_title');
 		$desc = self::misc_get($lang, 'checkout', 'bacs_description');
 		$instr = self::misc_get($lang, 'checkout', 'bacs_instructions');
 
 		// fallback: EN misc (master)
+		if ($title === '') $title = self::misc_get('en', 'checkout', 'bacs_title');
 		if ($desc === '') $desc = self::misc_get('en', 'checkout', 'bacs_description');
 		if ($instr === '') $instr = self::misc_get('en', 'checkout', 'bacs_instructions');
 
 		if (isset($gateways['bacs']) && is_object($gateways['bacs'])) {
+			if ($title !== '' && property_exists($gateways['bacs'], 'title')) $gateways['bacs']->title = $title;
 			if ($desc !== '') $gateways['bacs']->description = $desc;
 			if ($instr !== '') $gateways['bacs']->instructions = $instr;
 		}
