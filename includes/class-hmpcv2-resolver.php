@@ -77,6 +77,8 @@ final class HMPCv2_Resolver {
 
     public static function switch_url_for_current_context($target_lang) {
         $default = HMPCv2_Langs::default_lang();
+        $enabled = HMPCv2_Langs::enabled_langs();
+        $prefix_default = HMPCv2_Router::prefix_default_lang();
 
         $target_lang = HMPCv2_Langs::sanitize_lang_code($target_lang, $default);
 
@@ -85,34 +87,38 @@ final class HMPCv2_Resolver {
         $path  = isset($parts['path']) ? (string) $parts['path'] : '/';
         $query = isset($parts['query']) ? ('?' . $parts['query']) : '';
 
-        if (!$path) $path = '/';
-
-        $langs = HMPCv2_Langs::enabled_langs();
         $path = '/' . ltrim($path, '/');
-        foreach ($langs as $lg) {
-            $lg = HMPCv2_Langs::sanitize_lang_code($lg, $lg);
-            $prefix = '/' . $lg . '/';
 
-            if (stripos($path, $prefix) === 0) {
-                $path = '/' . ltrim(substr($path, strlen($prefix) - 1), '/');
-                break;
-            }
-
-            if ($path === '/' . $lg) {
-                $path = '/';
-                break;
+        $trim = trim($path, '/');
+        $segments = ($trim === '') ? array() : explode('/', $trim);
+        if (!empty($segments)) {
+            $maybe = strtolower((string) $segments[0]);
+            if (HMPCv2_Langs::is_allowed($maybe) && in_array($maybe, $enabled, true)) {
+                array_shift($segments);
             }
         }
 
-        $is_root = ($path === '/' || $path === '');
+        $base_path = '/' . implode('/', $segments);
+        if ($base_path === '//') $base_path = '/';
+        if ($base_path === '') $base_path = '/';
+
+        $is_root = ($base_path === '/' || $base_path === '');
 
         if ($target_lang === $default) {
-            $new_path = $is_root ? '/' : $path;
+            if ($prefix_default) {
+                $new_path = $is_root ? '/' . $default . '/' : '/' . $default . '/' . ltrim($base_path, '/');
+            } else {
+                $new_path = $is_root ? '/' : $base_path;
+            }
         } else {
-            $new_path = $is_root ? '/' . $target_lang . '/' : '/' . $target_lang . rtrim($path, '/');
+            $new_path = $is_root ? '/' . $target_lang . '/' : '/' . $target_lang . '/' . ltrim($base_path, '/');
         }
 
         $new_path = preg_replace('#/+#', '/', $new_path);
+
+        if (substr($new_path, -1) !== '/') {
+            $new_path .= '/';
+        }
 
         return home_url($new_path) . $query;
     }
