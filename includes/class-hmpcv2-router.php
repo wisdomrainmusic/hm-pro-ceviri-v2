@@ -166,6 +166,7 @@ class HMPCv2_Router {
         // Keep logo / home URLs inside current language prefix
         add_filter('get_custom_logo', array(__CLASS__, 'filter_custom_logo_href'), 20);
         add_filter('home_url', array(__CLASS__, 'filter_home_url_for_lang'), 20, 4);
+        add_filter('woocommerce_get_endpoint_url', array(__CLASS__, 'filter_wc_endpoint_url'), 20, 4);
 
         // SAFETY NET: if /<lang>/urun/<slug> falls into 404, rescue it.
         add_action('template_redirect', array(__CLASS__, 'rescue_404_prefixed_product'), 0);
@@ -710,6 +711,66 @@ class HMPCv2_Router {
         // Preserve scheme if WP already provided a specific scheme
         if (is_string($orig_scheme) && $orig_scheme !== '') {
             $target = set_url_scheme($target, $orig_scheme);
+        }
+
+        return $target;
+    }
+
+    /**
+     * Woo My Account "Dashboard" link (empty endpoint) uses wc_get_page_permalink('myaccount')
+     * which is not language-prefixed in our setup. This forces it to stay inside /{lang}/.
+     *
+     * @param string $url
+     * @param string $endpoint
+     * @param mixed  $value
+     * @param string $permalink
+     * @return string
+     */
+    public static function filter_wc_endpoint_url($url, $endpoint, $value, $permalink) {
+        if (is_admin() || !class_exists('WooCommerce') || !function_exists('wc_get_page_id')) {
+            return $url;
+        }
+
+        // Only adjust dashboard (empty endpoint). Other endpoints already work.
+        $endpoint = (string) $endpoint;
+        if ($endpoint !== '') {
+            return $url;
+        }
+
+        $lang = self::current_lang();
+        $enabled = HMPCv2_Langs::enabled_langs();
+        if (!in_array($lang, $enabled, true)) {
+            return $url;
+        }
+
+        $my_id = (int) wc_get_page_id('myaccount');
+        if ($my_id <= 0) {
+            return $url;
+        }
+
+        $my_slug = (string) get_post_field('post_name', $my_id);
+        if ($my_slug === '') {
+            return $url;
+        }
+
+        // Build the language-prefixed dashboard URL.
+        $default = HMPCv2_Langs::default_lang();
+        $prefix_default = self::prefix_default_lang();
+
+        $target = '';
+        if ($lang === $default && !$prefix_default) {
+            $target = home_url('/' . $my_slug . '/');
+        } else {
+            $target = home_url('/' . $lang . '/' . $my_slug . '/');
+        }
+
+        // Preserve query args (rare but safe)
+        $q = wp_parse_url($url, PHP_URL_QUERY);
+        if (is_string($q) && $q !== '') {
+            parse_str($q, $args);
+            if (is_array($args) && !empty($args)) {
+                $target = add_query_arg($args, $target);
+            }
         }
 
         return $target;
