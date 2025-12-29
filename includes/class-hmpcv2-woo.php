@@ -392,15 +392,16 @@ final class HMPCv2_Woo {
 
 	public static function woo_gettext_override($translation, $text, $domain) {
 		$lang = self::current_lang_code();
-		if ($domain === 'woocommerce') {
-			error_log('[HMPCv2][woo_gettext] lang=' . $lang . ' text=' . $text);
+		// DEBUG CHECK
+		if (get_option('hmpcv2_debug_enabled', 0)) {
+			error_log('[HMPCv2][woo_gettext] ' . $text);
 		}
-		if ($domain !== 'woocommerce') return $translation;
-		if (!self::is_on_woo_core_page()) return $translation;
 
 		if ($lang === '') return $translation;
 
 		$dict = self::woo_dict();
+		if (!isset($dict[$lang]) || !isset($dict[$lang][$domain])) return $translation;
+		if ($domain === 'woocommerce' && !self::is_on_woo_core_page()) return $translation;
 		$key = self::dict_key_simple((string) $text);
 
 		if (isset($dict[$lang]) && isset($dict[$lang][$domain]) && isset($dict[$lang][$domain][$key])) {
@@ -412,13 +413,12 @@ final class HMPCv2_Woo {
 	}
 
 	public static function woo_gettext_with_context_override($translation, $text, $context, $domain) {
-		if ($domain !== 'woocommerce') return $translation;
-		if (!self::is_on_woo_core_page()) return $translation;
-
 		$lang = self::current_lang_code();
 		if ($lang === '') return $translation;
 
 		$dict = self::woo_dict();
+		if (!isset($dict[$lang]) || !isset($dict[$lang][$domain])) return $translation;
+		if ($domain === 'woocommerce' && !self::is_on_woo_core_page()) return $translation;
 		$key = self::dict_key_context((string) $context, (string) $text);
 
 		if (isset($dict[$lang]) && isset($dict[$lang][$domain]) && isset($dict[$lang][$domain][$key])) {
@@ -430,6 +430,7 @@ final class HMPCv2_Woo {
 	}
 
 	public static function debug_footer_comment() {
+		if (!get_option('hmpcv2_debug_enabled', 0)) return;
 		if (is_admin()) return;
 		if (!function_exists('is_product') || !is_product()) return;
 

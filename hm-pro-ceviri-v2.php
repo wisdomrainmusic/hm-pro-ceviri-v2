@@ -81,6 +81,7 @@ final class HMPCv2_Plugin {
 
     public function activate() {
         HMPCv2_Options::maybe_init_defaults();
+        update_option('hmpcv2_debug_enabled', 0, false);
         HMPCv2_Router::register_rewrite_rules();
         flush_rewrite_rules();
     }

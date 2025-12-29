@@ -30,7 +30,7 @@ jQuery(function ($) {
   setTab("content");
 
   function ensureWooDefaults() {
-    const $lang = $("#hmpcv2-woo-lang");
+    const $lang = $("#hmpcv2-language-select");
     const $domain = $("#hmpcv2-woo-domain");
     if ($lang.length && !$lang.val()) {
       $lang.val("en");
@@ -47,7 +47,7 @@ jQuery(function ($) {
     return $.extend(
       {
         nonce: data.nonce,
-        lang: $("#hmpcv2-woo-lang").val() || "en",
+        lang: $("#hmpcv2-language-select").val() || "en",
         domain: $("#hmpcv2-woo-domain").val() || "woocommerce"
       },
       extra || {}
@@ -103,12 +103,12 @@ jQuery(function ($) {
   }
 
   let wooSearchTimer = null;
-  $(document).on("input", "#hmpcv2-woo-search", function () {
+  $(document).on("input keyup", "#hmpcv2-woo-search", function () {
     clearTimeout(wooSearchTimer);
     wooSearchTimer = setTimeout(fetchWooList, 300);
   });
 
-  $(document).on("change", "#hmpcv2-woo-lang, #hmpcv2-woo-domain", function () {
+  $(document).on("change", "#hmpcv2-language-select, #hmpcv2-woo-domain", function () {
     fetchWooList();
   });
 
@@ -168,6 +168,40 @@ jQuery(function ($) {
       })
       .fail(function () {
         alert("Delete failed");
+      });
+  });
+
+  $(document).on("click", "#hmpcv2-load-woo-preset", function () {
+    const preset = $("#hmpcv2-woo-preset-select").val() || "";
+    const lang = $("#hmpcv2-language-select").val() || "";
+    const $btn = $(this);
+
+    if (!preset || !lang) {
+      alert("Select language and preset");
+      return;
+    }
+
+    $btn.prop("disabled", true).text("Loading…");
+    $.post(data.ajax_url || window.ajaxurl, {
+      action: "hmpcv2_woo_seed_presets",
+      nonce: hmpcv2Nonce(),
+      lang: lang,
+      preset: preset
+    })
+      .done(function (res) {
+        if (!res || !res.success) {
+          alert("Preset load failed");
+          return;
+        }
+        const added = res.data && typeof res.data.added !== "undefined" ? res.data.added : 0;
+        alert(added + " strings added");
+        $("#hmpcv2-woo-search").trigger("keyup");
+      })
+      .fail(function () {
+        alert("Preset load failed");
+      })
+      .always(function () {
+        $btn.prop("disabled", false).text("Load preset");
       });
   });
 
