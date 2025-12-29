@@ -59,6 +59,79 @@ class HMPCv2_Router {
         return ($p === 'magaza' || $p === 'shop');
     }
 
+    /**
+     * WooCommerce endpoints (especially My Account) rely on specific WP query vars.
+     * Our language-prefixed catch-all rewrite turns URLs like:
+     *   /en/my-account/downloads/
+     * into:
+     *   index.php?hmpcv2_lang=en&hmpcv2_path=my-account/downloads
+     * which bypasses Woo's native endpoint parsing. Result: the URL changes but
+     * Woo renders the dashboard because the endpoint query var isn't set.
+     *
+     * This mapper reconstructs the expected query vars for Woo core pages under
+     * a language prefix, starting with My Account.
+     */
+    private static function maybe_map_woo_core_endpoints(string $lang, string $path) {
+        if (!class_exists('WooCommerce')) return null;
+        if (!function_exists('wc_get_page_id')) return null;
+
+        $path = trim($path, '/');
+        if ($path === '') return null;
+
+        $segments = explode('/', $path);
+        $first = (string) ($segments[0] ?? '');
+        if ($first === '') return null;
+
+        // --- My Account ---
+        $my_id = (int) wc_get_page_id('myaccount');
+        if ($my_id > 0) {
+            $my_slug = (string) get_post_field('post_name', $my_id);
+            if ($my_slug !== '' && $first === $my_slug) {
+                $qv = array(
+                    'page_id'   => $my_id,
+                    'pagename'  => $my_slug,
+                    'post_type' => 'page',
+                    self::QV_LANG => $lang,
+                    self::QV_PATH => $path,
+                );
+
+                // Endpoint segment (e.g. downloads, orders, edit-address, view-order/123)
+                $endpoint_seg = (string) ($segments[1] ?? '');
+                if ($endpoint_seg !== '') {
+                    $endpoint_seg = urldecode($endpoint_seg);
+
+                    $wc_qv = array();
+                    if (function_exists('WC') && WC() && isset(WC()->query) && method_exists(WC()->query, 'get_query_vars')) {
+                        $wc_qv = (array) WC()->query->get_query_vars();
+                    }
+
+                    // Match against both keys and values to be future-proof.
+                    $matched_qv = '';
+                    if (isset($wc_qv[$endpoint_seg])) {
+                        $matched_qv = (string) $wc_qv[$endpoint_seg];
+                    } else {
+                        foreach ($wc_qv as $ep => $qv_name) {
+                            if ((string) $qv_name === $endpoint_seg) {
+                                $matched_qv = (string) $qv_name;
+                                break;
+                            }
+                        }
+                    }
+
+                    if ($matched_qv !== '') {
+                        // Some endpoints have a value segment (e.g. view-order/123, edit-address/billing)
+                        $value = (string) ($segments[2] ?? '');
+                        $qv[$matched_qv] = ($value !== '') ? urldecode($value) : '';
+                    }
+                }
+
+                return $qv;
+            }
+        }
+
+        return null;
+    }
+
     private static function force_shop_archive_query($query_vars) {
         // Force Woo "shop" archive behavior.
         // Important: remove single/page vars to prevent page template rendering.
@@ -281,6 +354,12 @@ class HMPCv2_Router {
         $enabled = HMPCv2_Langs::enabled_langs();
         if (!in_array($lang, $enabled, true)) {
             return $query_vars;
+        }
+
+        // Woo core endpoints (My Account tabs, etc.) must be mapped BEFORE url_to_postid().
+        $woo_qv = self::maybe_map_woo_core_endpoints($lang, $path);
+        if (is_array($woo_qv)) {
+            return $woo_qv;
         }
 
         // 1) Woo taxonomy archives must stay as archives (map BEFORE url_to_postid)
