@@ -523,34 +523,57 @@ final class HMPCv2_Admin_Translations {
 
         if ($lang === '' || $domain === '') wp_send_json_error(array('message' => 'bad_input'), 400);
 
-        $dict = get_option('hmpcv2_woo_dict', array());
-        $dict = is_array($dict) ? $dict : array();
         $list = array();
-
-        $entries = array();
-        if (isset($dict[$lang]) && is_array($dict[$lang])) {
-            $entries = isset($dict[$lang][$domain]) && is_array($dict[$lang][$domain]) ? $dict[$lang][$domain] : array();
-        }
 
         $q = trim($q);
         $limit = 200;
-        foreach ($entries as $key => $translation) {
-            if (count($list) >= $limit) break;
-            $parsed = self::hmpcv2_parse_woo_dict_key((string) $key);
-            $original = isset($parsed['original']) ? (string) $parsed['original'] : '';
-            $context = isset($parsed['context']) ? (string) $parsed['context'] : '';
-            $translation = is_string($translation) ? $translation : '';
+        if ($domain === 'checkout_misc') {
+            $misc = get_option('hmpcv2_misc_dict', array());
+            $misc = is_array($misc) ? $misc : array();
+            $entries = isset($misc[$lang]['checkout']) && is_array($misc[$lang]['checkout']) ? $misc[$lang]['checkout'] : array();
 
-            if ($q !== '') {
-                $haystack = $original . ' ' . $context . ' ' . $translation;
-                if (stripos($haystack, $q) === false) continue;
+            foreach ($entries as $key => $translation) {
+                if (count($list) >= $limit) break;
+                $original = (string) $key;
+                $translation = is_string($translation) ? $translation : '';
+
+                if ($q !== '') {
+                    $haystack = $original . ' ' . $translation;
+                    if (stripos($haystack, $q) === false) continue;
+                }
+
+                $list[] = array(
+                    'original' => $original,
+                    'context' => '',
+                    'translation' => $translation,
+                );
+            }
+        } else {
+            $dict = get_option('hmpcv2_woo_dict', array());
+            $dict = is_array($dict) ? $dict : array();
+            $entries = array();
+            if (isset($dict[$lang]) && is_array($dict[$lang])) {
+                $entries = isset($dict[$lang][$domain]) && is_array($dict[$lang][$domain]) ? $dict[$lang][$domain] : array();
             }
 
-            $list[] = array(
-                'original' => $original,
-                'context' => $context,
-                'translation' => $translation,
-            );
+            foreach ($entries as $key => $translation) {
+                if (count($list) >= $limit) break;
+                $parsed = self::hmpcv2_parse_woo_dict_key((string) $key);
+                $original = isset($parsed['original']) ? (string) $parsed['original'] : '';
+                $context = isset($parsed['context']) ? (string) $parsed['context'] : '';
+                $translation = is_string($translation) ? $translation : '';
+
+                if ($q !== '') {
+                    $haystack = $original . ' ' . $context . ' ' . $translation;
+                    if (stripos($haystack, $q) === false) continue;
+                }
+
+                $list[] = array(
+                    'original' => $original,
+                    'context' => $context,
+                    'translation' => $translation,
+                );
+            }
         }
 
         wp_send_json_success(array('items' => $list));
@@ -568,6 +591,28 @@ final class HMPCv2_Admin_Translations {
 
         if ($lang === '' || $domain === '' || trim($original) === '') {
             wp_send_json_error(array('message' => 'bad_input'), 400);
+        }
+
+        if ($domain === 'checkout_misc') {
+            $misc = get_option('hmpcv2_misc_dict', array());
+            $misc = is_array($misc) ? $misc : array();
+
+            if (!isset($misc[$lang]) || !is_array($misc[$lang])) $misc[$lang] = array();
+            if (!isset($misc[$lang]['checkout']) || !is_array($misc[$lang]['checkout'])) $misc[$lang]['checkout'] = array();
+
+            if (trim($translation) === '') {
+                if (isset($misc[$lang]['checkout'][$original])) {
+                    unset($misc[$lang]['checkout'][$original]);
+                    if (empty($misc[$lang]['checkout'])) unset($misc[$lang]['checkout']);
+                    if (empty($misc[$lang])) unset($misc[$lang]);
+                    update_option('hmpcv2_misc_dict', $misc, false);
+                }
+                wp_send_json_success(array('saved' => true, 'deleted' => true));
+            }
+
+            $misc[$lang]['checkout'][$original] = $translation;
+            update_option('hmpcv2_misc_dict', $misc, false);
+            wp_send_json_success(array('saved' => true));
         }
 
         $dict = get_option('hmpcv2_woo_dict', array());
@@ -605,6 +650,20 @@ final class HMPCv2_Admin_Translations {
 
         if ($lang === '' || $domain === '' || trim($original) === '') {
             wp_send_json_error(array('message' => 'bad_input'), 400);
+        }
+
+        if ($domain === 'checkout_misc') {
+            $misc = get_option('hmpcv2_misc_dict', array());
+            $misc = is_array($misc) ? $misc : array();
+
+            if (isset($misc[$lang]['checkout'][$original])) {
+                unset($misc[$lang]['checkout'][$original]);
+                if (empty($misc[$lang]['checkout'])) unset($misc[$lang]['checkout']);
+                if (empty($misc[$lang])) unset($misc[$lang]);
+                update_option('hmpcv2_misc_dict', $misc, false);
+            }
+
+            wp_send_json_success(array('deleted' => true));
         }
 
         $dict = get_option('hmpcv2_woo_dict', array());
