@@ -11,6 +11,9 @@ if (!defined('ABSPATH')) exit;
 define('HMPCV2_VERSION', '2.0.0');
 define('HMPCV2_PATH', plugin_dir_path(__FILE__));
 define('HMPCV2_URL', plugin_dir_url(__FILE__));
+if (!defined('HMPC_DEBUG')) {
+    define('HMPC_DEBUG', false);
+}
 
 require_once HMPCV2_PATH . 'includes/class-hmpcv2-options.php';
 require_once HMPCV2_PATH . 'includes/class-hmpcv2-langs.php';

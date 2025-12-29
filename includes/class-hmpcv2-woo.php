@@ -15,7 +15,7 @@ final class HMPCv2_Woo {
 		add_filter('the_title', array(__CLASS__, 'filter_woo_core_page_title'), 21, 2);
 		add_filter('the_content', array(__CLASS__, 'filter_product_content'), 20);
 		add_filter('woocommerce_short_description', array(__CLASS__, 'filter_product_short_description'), 20);
-		add_action('wp_footer', array(__CLASS__, 'debug_footer_comment'), 9999);
+		add_filter('woocommerce_get_endpoint_url', array(__CLASS__, 'filter_woocommerce_endpoint_url'), 10, 4);
 
 		// Attribute label/value translation (display layer)
 		add_filter('woocommerce_attribute_label', array(__CLASS__, 'filter_attribute_label'), 20, 3);
@@ -392,9 +392,8 @@ final class HMPCv2_Woo {
 
 	public static function woo_gettext_override($translation, $text, $domain) {
 		$lang = self::current_lang_code();
-		// DEBUG CHECK
-		if (get_option('hmpcv2_debug_enabled', 0)) {
-			error_log('[HMPCv2][woo_gettext] ' . $text);
+		if (defined('HMPC_DEBUG') && HMPC_DEBUG) {
+			error_log('[HMPCv2][woo_gettext] text=' . $text . ' translation=' . $translation);
 		}
 
 		if ($lang === '') return $translation;
@@ -414,6 +413,9 @@ final class HMPCv2_Woo {
 
 	public static function woo_gettext_with_context_override($translation, $text, $context, $domain) {
 		$lang = self::current_lang_code();
+		if (defined('HMPC_DEBUG') && HMPC_DEBUG) {
+			error_log('[HMPCv2][woo_gettext_context] context=' . $context . ' text=' . $text . ' translation=' . $translation);
+		}
 		if ($lang === '') return $translation;
 
 		$dict = self::woo_dict();
@@ -455,5 +457,59 @@ final class HMPCv2_Woo {
 		);
 
 		echo "\n<!-- HMPCv2 PRODUCT DEBUG: " . esc_html(wp_json_encode($data)) . " -->\n";
+	}
+
+	public static function filter_woocommerce_endpoint_url($url, $endpoint, $value, $permalink) {
+		if (is_admin()) return $url;
+
+		$current = HMPCv2_Router::current_lang();
+		$default = HMPCv2_Langs::default_lang();
+		$enabled = HMPCv2_Langs::enabled_langs();
+		$prefix_default = HMPCv2_Router::prefix_default_lang();
+
+		if (!$current || ($current === $default && !$prefix_default)) {
+			return $url;
+		}
+
+		$parts = wp_parse_url($url);
+		if (!$parts || empty($parts['path'])) {
+			return $url;
+		}
+
+		$path = '/' . ltrim((string) $parts['path'], '/');
+		$trim = trim($path, '/');
+		$segments = ($trim === '') ? array() : explode('/', $trim);
+
+		if (!empty($segments)) {
+			$maybe = strtolower((string) $segments[0]);
+			if (in_array($maybe, $enabled, true)) {
+				array_shift($segments);
+			}
+		}
+
+		$base_path = '/' . implode('/', $segments);
+		if ($base_path === '//') {
+			$base_path = '/';
+		}
+
+		if ($base_path === '/' || $base_path === '') {
+			$new_path = '/' . $current . '/';
+		} else {
+			$new_path = '/' . $current . '/' . ltrim($base_path, '/');
+		}
+
+		$new_path = preg_replace('#/+#', '/', $new_path);
+
+		$scheme = isset($parts['scheme']) ? $parts['scheme'] . '://' : '';
+		$host = $parts['host'] ?? '';
+		$port = isset($parts['port']) ? ':' . $parts['port'] : '';
+		$query = isset($parts['query']) ? '?' . $parts['query'] : '';
+		$fragment = isset($parts['fragment']) ? '#' . $parts['fragment'] : '';
+
+		if ($host === '') {
+			return home_url($new_path) . $query . $fragment;
+		}
+
+		return $scheme . $host . $port . $new_path . $query . $fragment;
 	}
 }
