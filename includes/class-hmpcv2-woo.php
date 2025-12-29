@@ -36,6 +36,10 @@ final class HMPCv2_Woo {
 		// Checkout: privacy policy text (DB-based)
 		add_filter('woocommerce_get_privacy_policy_text', array(__CLASS__, 'filter_privacy_policy_text'), 20, 1);
 		add_filter('woocommerce_checkout_privacy_policy_text', array(__CLASS__, 'filter_privacy_policy_text'), 20, 1);
+
+		// Checkout: field labels and coupon notice (DB-based)
+		add_filter('woocommerce_checkout_fields', array(__CLASS__, 'filter_checkout_fields'), 20, 1);
+		add_filter('woocommerce_checkout_coupon_message', array(__CLASS__, 'filter_checkout_coupon_message'), 20, 1);
 	}
 
 	public static function filter_available_payment_gateways($gateways) {
@@ -75,6 +79,49 @@ final class HMPCv2_Woo {
 		if ($v === '') $v = self::misc_get('en', 'checkout', 'privacy_policy_text');
 
 		return ($v !== '') ? $v : $text;
+	}
+
+	public static function filter_checkout_fields($fields) {
+		if (is_admin()) return $fields;
+
+		$lang = self::current_lang_code();
+		if ($lang === '') return $fields;
+
+		$map = array(
+			'billing_city_label' => array('group' => 'billing', 'field' => 'billing_city'),
+			'billing_phone_label' => array('group' => 'billing', 'field' => 'billing_phone'),
+			'billing_company_label' => array('group' => 'billing', 'field' => 'billing_company'),
+			'order_comments_label' => array('group' => 'order', 'field' => 'order_comments'),
+		);
+
+		foreach ($map as $key => $target) {
+			$label = self::checkout_fields_get($lang, $key);
+			if ($label === '') continue;
+
+			$group = $target['group'];
+			$field = $target['field'];
+
+			if (!isset($fields[$group][$field]) || !is_array($fields[$group][$field])) {
+				continue;
+			}
+
+			$fields[$group][$field]['label'] = $label;
+			if (isset($fields[$group][$field]['placeholder'])) {
+				$fields[$group][$field]['placeholder'] = $label;
+			}
+		}
+
+		return $fields;
+	}
+
+	public static function filter_checkout_coupon_message($message) {
+		if (is_admin()) return $message;
+
+		$lang = self::current_lang_code();
+		if ($lang === '') return $message;
+
+		$text = self::checkout_fields_get($lang, 'coupon_notice_text');
+		return $text !== '' ? $text : $message;
 	}
 
 	// ---------- Meta keys ----------
@@ -143,6 +190,24 @@ final class HMPCv2_Woo {
 			$v = (string) $dict[$lang][$group][$key];
 			if ($v !== '') return $v;
 		}
+		return '';
+	}
+
+	private static function checkout_fields_get($lang, $key): string {
+		$dict = self::woo_dict();
+		$domain = 'checkout_fields';
+		$entry_key = self::dict_key_simple((string) $key);
+
+		if (isset($dict[$lang][$domain][$entry_key])) {
+			$v = (string) $dict[$lang][$domain][$entry_key];
+			if ($v !== '') return $v;
+		}
+
+		if ($lang !== 'en' && isset($dict['en'][$domain][$entry_key])) {
+			$v = (string) $dict['en'][$domain][$entry_key];
+			if ($v !== '') return $v;
+		}
+
 		return '';
 	}
 
