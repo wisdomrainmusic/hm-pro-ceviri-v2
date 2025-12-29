@@ -169,6 +169,7 @@ class HMPCv2_Router {
          */
         add_filter('post_type_link', array(__CLASS__, 'filter_post_type_link_to_current_lang'), 20, 2);
         add_filter('post_link', array(__CLASS__, 'filter_post_link_to_current_lang'), 20, 3);
+        add_filter('page_link', array(__CLASS__, 'filter_page_link_to_post_lang'), 20, 2);
         add_filter('term_link', array(__CLASS__, 'filter_term_link_to_current_lang'), 20, 3);
         /**
          * Woo URLs: keep checkout/cart in the current language (fixes Proceed to Checkout).
@@ -262,11 +263,22 @@ class HMPCv2_Router {
         if (!self::is_internal_url($url)) return $url;
 
         $current = HMPCv2_Langs::get_current_language();
+        return self::apply_lang_to_url($url, $current);
+    }
+
+    /**
+     * Apply an explicit language prefix to an internal URL.
+     */
+    public static function apply_lang_to_url($url, $lang) {
+        if (!self::is_internal_url($url)) return $url;
+
         $default = HMPCv2_Langs::default_lang();
         $enabled = HMPCv2_Langs::enabled_langs();
 
-        $current = HMPCv2_Langs::sanitize_lang_code($current, $default);
-        if (!in_array($current, $enabled, true)) $current = $default;
+        $lang = HMPCv2_Langs::sanitize_lang_code($lang, $default);
+        if (!in_array($lang, $enabled, true)) {
+            return $url;
+        }
 
         $parts = wp_parse_url($url);
         if (empty($parts)) return $url;
@@ -282,12 +294,12 @@ class HMPCv2_Router {
         $prefix_default = self::prefix_default_lang();
 
         // Build new path.
-        if ($current === $default && !$prefix_default) {
+        if ($lang === $default && !$prefix_default) {
             $new_path = $is_root ? '/' : $base_path;
         } else {
             $new_path = $is_root
-                ? '/' . $current . '/'
-                : '/' . $current . '/' . ltrim($base_path, '/');
+                ? '/' . $lang . '/'
+                : '/' . $lang . '/' . ltrim($base_path, '/');
         }
 
         $new_path = preg_replace('#/+#', '/', $new_path);
@@ -324,6 +336,24 @@ class HMPCv2_Router {
         if (empty($permalink)) return $permalink;
         // Keep behavior focused; if you want all posts/pages prefixed, expand here.
         return $permalink;
+    }
+
+    /**
+     * Filter: page links should use the page's own language prefix.
+     */
+    public static function filter_page_link_to_post_lang($link, $post_id) {
+        if (empty($link)) return $link;
+
+        if (!class_exists('HMPCv2_Translations')) {
+            return $link;
+        }
+
+        $lang = HMPCv2_Translations::get_lang((int) $post_id);
+        if (!is_string($lang) || $lang === '') {
+            return $link;
+        }
+
+        return self::apply_lang_to_url($link, $lang);
     }
 
     /**
