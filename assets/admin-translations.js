@@ -102,28 +102,18 @@ jQuery(function ($) {
     }, 2000);
   }
 
-  function ensureWooModal() {
-    if ($("#hmpcv2-woo-title-modal").length) return;
-    const modal =
-      '<div class="hmpcv2-modal-overlay" id="hmpcv2-woo-title-modal">' +
-        '<div class="hmpcv2-modal" role="dialog" aria-modal="true" aria-labelledby="hmpcv2-woo-title-modal-title">' +
-          '<h2 id="hmpcv2-woo-title-modal-title">Edit Title</h2>' +
-          '<label for="hmpcv2-woo-title-input">Title</label>' +
-          '<input type="text" id="hmpcv2-woo-title-input" class="hmpcv2-woo-title-input" />' +
-          '<div class="hmpcv2-modal-actions">' +
-            '<button type="button" class="button button-primary hmpcv2-woo-title-save">Save</button>' +
-            '<button type="button" class="button hmpcv2-woo-title-cancel">Cancel</button>' +
-          '</div>' +
-        '</div>' +
-      '</div>';
-    $("body").append(modal);
+  function hmpcv2Nonce() {
+    if (data && data.nonce) return data.nonce;
+    if (window.HMPCV2 && HMPCV2.nonce) return HMPCV2.nonce;
+    if (window.hmpcv2_admin && hmpcv2_admin.nonce) return hmpcv2_admin.nonce;
+    if (window.HMPCV2_Admin && HMPCV2_Admin.nonce) return HMPCV2_Admin.nonce;
+    return "";
   }
 
-  function closeWooModal() {
-    const $modal = $("#hmpcv2-woo-title-modal");
-    $modal.hide();
-    $modal.removeData("pageId").removeData("lang");
-    $modal.find(".hmpcv2-woo-title-input").val("");
+  function hmpcv2PostId($btn) {
+    const $card = $btn.closest(".hmpcv2-card");
+    const postId = $card.data("post");
+    return parseInt(postId, 10) || 0;
   }
 
   function buildRow(item) {
@@ -279,88 +269,57 @@ jQuery(function ($) {
       });
   });
 
-  $(document).on("click", '[data-action="hmpcv2-woo-title-edit"]', function () {
+  $(document).on("click", '[data-action="hmpcv2-woo-title-edit"]', function (event) {
+    event.preventDefault();
+
     const $btn = $(this);
-    const $card = $btn.closest(".hmpcv2-card");
-    const pageId = parseInt($card.data("post"), 10) || 0;
-    const lang = ($btn.data("lang") || "").toString();
-    if (!pageId || !lang) return;
+    const pageId = hmpcv2PostId($btn);
+    const lang = ($btn.data("lang") || "").toString().toLowerCase();
+    const nonce = hmpcv2Nonce();
+    const ajaxUrl = data.ajax_url || window.ajaxurl || "";
 
-    ensureWooModal();
-    const $modal = $("#hmpcv2-woo-title-modal");
-    const $input = $modal.find(".hmpcv2-woo-title-input");
-    const label = lang.toUpperCase();
+    if (!pageId || !lang) {
+      alert("Missing page_id/lang");
+      return;
+    }
 
-    $modal.data("pageId", pageId).data("lang", lang);
-    $modal.find("#hmpcv2-woo-title-modal-title").text("Edit " + label + " Title");
-    $input.prop("disabled", true).val("Loading…");
-    $modal.css("display", "flex");
-
-    $.post(data.ajax_url, {
+    $.post(ajaxUrl, {
       action: "hmpcv2_get_woo_page_title",
-      nonce: data.nonce,
+      nonce: nonce,
       page_id: pageId,
       lang: lang
     })
       .done(function (res) {
-        if (res && res.success && res.data) {
-          $input.val(res.data.title || "");
-        } else {
-          $input.val("");
-          alert("Unable to load title");
+        if (!res || !res.success) {
+          alert("Load failed");
+          return;
         }
+
+        const current = res.data && typeof res.data.title === "string" ? res.data.title : "";
+        const nextTitle = window.prompt("Enter title for " + lang.toUpperCase(), current);
+
+        if (nextTitle === null) return;
+
+        $.post(ajaxUrl, {
+          action: "hmpcv2_save_woo_page_title",
+          nonce: nonce,
+          page_id: pageId,
+          lang: lang,
+          title: nextTitle
+        })
+          .done(function (res2) {
+            if (!res2 || !res2.success) {
+              alert("Save failed");
+              return;
+            }
+            alert("Saved");
+          })
+          .fail(function () {
+            alert("Save request failed");
+          });
       })
       .fail(function () {
-        $input.val("");
-        alert("Unable to load title");
-      })
-      .always(function () {
-        $input.prop("disabled", false);
-        $input.focus();
-      });
-  });
-
-  $(document).on("click", ".hmpcv2-woo-title-cancel", function () {
-    closeWooModal();
-  });
-
-  $(document).on("click", ".hmpcv2-modal-overlay", function (event) {
-    if (event.target === this) {
-      closeWooModal();
-    }
-  });
-
-  $(document).on("click", ".hmpcv2-woo-title-save", function () {
-    const $modal = $("#hmpcv2-woo-title-modal");
-    const pageId = parseInt($modal.data("pageId"), 10) || 0;
-    const lang = ($modal.data("lang") || "").toString();
-    const $input = $modal.find(".hmpcv2-woo-title-input");
-    const title = $input.val();
-    if (!pageId || !lang) return;
-
-    const $btn = $(this);
-    $btn.prop("disabled", true).text("Saving…");
-
-    $.post(data.ajax_url, {
-      action: "hmpcv2_save_woo_page_title",
-      nonce: data.nonce,
-      page_id: pageId,
-      lang: lang,
-      title: title
-    })
-      .done(function (res) {
-        if (res && res.success) {
-          showNotice("Saved");
-          closeWooModal();
-        } else {
-          alert("Save failed");
-        }
-      })
-      .fail(function () {
-        alert("Save failed");
-      })
-      .always(function () {
-        $btn.prop("disabled", false).text("Save");
+        alert("Load request failed");
       });
   });
 
