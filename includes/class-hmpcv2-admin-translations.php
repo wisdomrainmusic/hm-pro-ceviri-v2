@@ -160,6 +160,16 @@ class HMPCv2_Woo_Presets {
                     ),
                 ),
             ),
+            'checkout_misc' => array(
+                'label' => 'Checkout – Misc (Gateway + Privacy)',
+                'group' => 'misc',
+                'strings' => array(
+                    'bacs_title' => 'Direct bank transfer',
+                    'bacs_description' => 'Make your payment directly into our bank account. Please use your Order ID as the payment reference. Your order will not be shipped until the funds have cleared in our account.',
+                    'bacs_instructions' => 'Make your payment directly into our bank account. Please use your Order ID as the payment reference. Your order will not be shipped until the funds have cleared in our account.',
+                    'privacy_policy_text' => 'Your personal data will be used to process your order, support your experience throughout this website, and for other purposes described in our [privacy_policy].',
+                ),
+            ),
             'woo_account' => array(
                 'label' => 'Woo Core – My Account',
                 'domains' => array(
@@ -629,77 +639,73 @@ final class HMPCv2_Admin_Translations {
             wp_send_json_error(array('message' => 'invalid_preset'), 400);
         }
 
+        $set = $sets[$preset];
+        $seed_all = !empty($_POST['seed_all']);
+        $all_langs = array('tr','en','de','fr','es','it','pt','nl','pl','cs','sk','hu','ro','bg','el','sv','no','da','fi','is','et','lv','lt','sl','hr','sr','bs','mk','sq','uk','ru','be','ga','cy','eu','ca','gl','mt','lb','ka','hy','az','ar','fa','ku','zh');
+        $langs_to_seed = $seed_all ? $all_langs : array($lang);
+
+        if (isset($set['group']) && $set['group'] === 'misc') {
+            $misc = get_option('hmpcv2_misc_dict', array());
+            if (!is_array($misc)) $misc = array();
+
+            $added_total = 0;
+            foreach ($langs_to_seed as $L) {
+                if (!isset($misc[$L])) $misc[$L] = array();
+                if (!isset($misc[$L]['checkout'])) $misc[$L]['checkout'] = array();
+
+                foreach ((array) $set['strings'] as $k => $v_en) {
+                    if (!isset($misc[$L]['checkout'][$k]) || $misc[$L]['checkout'][$k] === '') {
+                        // Seed EN master as placeholder for all languages; translate later in UI.
+                        $misc[$L]['checkout'][$k] = (string) $v_en;
+                        $added_total++;
+                    }
+                }
+            }
+
+            update_option('hmpcv2_misc_dict', $misc, false);
+            wp_send_json_success(array('added' => $added_total));
+        }
+
         $dict = get_option('hmpcv2_woo_dict', array());
         $dict = is_array($dict) ? $dict : array();
         $added = 0;
 
-        foreach ($sets[$preset]['domains'] as $domain => $strings) {
-            $domain = sanitize_text_field((string) $domain);
-            if (!isset($dict[$lang][$domain]) || !is_array($dict[$lang][$domain])) {
-                $dict[$lang][$domain] = array();
-            }
+        if (isset($set['domains']) && is_array($set['domains'])) {
+            foreach ($set['domains'] as $domain => $strings) {
+                $domain = sanitize_text_field((string) $domain);
+                if (!isset($dict[$lang][$domain]) || !is_array($dict[$lang][$domain])) {
+                    $dict[$lang][$domain] = array();
+                }
 
-            foreach ($strings as $k => $v) {
-                // Support both:
-                // 1) numeric arrays: [ 'Cart', 'Total', ... ]  => translation defaults to original
-                // 2) associative arrays: [ 'Gönderim' => 'Shipping', ... ]
-                $is_map = !is_int($k);
+                foreach ($strings as $k => $v) {
+                    // Support both:
+                    // 1) numeric arrays: [ 'Cart', 'Total', ... ]  => translation defaults to original
+                    // 2) associative arrays: [ 'Gönderim' => 'Shipping', ... ]
+                    $is_map = !is_int($k);
 
-                $original = $is_map ? (string) $k : (string) $v;
-                $translation = $is_map ? (string) $v : (string) $v;
+                    $original = $is_map ? (string) $k : (string) $v;
+                    $translation = $is_map ? (string) $v : (string) $v;
 
-                $original = sanitize_text_field($original);
-                $translation = sanitize_text_field($translation);
+                    $original = sanitize_text_field($original);
+                    $translation = sanitize_text_field($translation);
 
-                if ($original === '') continue;
+                    if ($original === '') continue;
 
-                $key = self::hmpcv2_woo_dict_key($original, '');
+                    $key = self::hmpcv2_woo_dict_key($original, '');
 
-                // Seed only if missing (do not overwrite admin edits)
-                if (!isset($dict[$lang][$domain][$key])) {
-                    $dict[$lang][$domain][$key] = ($translation !== '' ? $translation : $original);
-                    $added++;
+                    // Seed only if missing (do not overwrite admin edits)
+                    if (!isset($dict[$lang][$domain][$key])) {
+                        $dict[$lang][$domain][$key] = ($translation !== '' ? $translation : $original);
+                        $added++;
+                    }
                 }
             }
         }
 
         update_option('hmpcv2_woo_dict', $dict, false);
 
-        $added_misc = 0;
-        if (isset($sets[$preset]['misc']) && is_array($sets[$preset]['misc'])) {
-            $misc = get_option('hmpcv2_misc_dict', array());
-            $misc = is_array($misc) ? $misc : array();
-
-            foreach ($sets[$preset]['misc'] as $group => $items) {
-                $group = sanitize_text_field((string) $group);
-                if ($group === '' || !is_array($items)) continue;
-
-                if (!isset($misc[$lang][$group]) || !is_array($misc[$lang][$group])) {
-                    $misc[$lang][$group] = array();
-                }
-
-                foreach ($items as $key => $value) {
-                    $entry_key = is_int($key) ? (string) $value : (string) $key;
-                    $entry_value = (string) $value;
-
-                    $entry_key = sanitize_text_field($entry_key);
-                    $entry_value = sanitize_text_field($entry_value);
-
-                    if ($entry_key === '') continue;
-
-                    if (!isset($misc[$lang][$group][$entry_key])) {
-                        $misc[$lang][$group][$entry_key] = $entry_value;
-                        $added_misc++;
-                    }
-                }
-            }
-
-            update_option('hmpcv2_misc_dict', $misc, false);
-        }
-
         wp_send_json_success(array(
             'added' => $added,
-            'added_misc' => $added_misc,
             'preset' => $preset,
         ));
     }
@@ -1239,6 +1245,7 @@ final class HMPCv2_Admin_Translations {
         echo '<option value="woocommerce-admin">woocommerce-admin</option>';
         echo '<option value="cartflows">cartflows</option>';
         echo '<option value="cartflows-pro">cartflows-pro</option>';
+        echo '<option value="checkout_misc">Checkout – Misc (Gateway + Privacy)</option>';
         echo '<option value="default">default</option>';
         echo '</select></label>';
         echo '<label>Search<br><input type="text" id="hmpcv2-woo-search" placeholder="Search strings" style="width:240px;" /></label>';
@@ -1250,6 +1257,10 @@ final class HMPCv2_Admin_Translations {
         }
         echo '</select></label>';
         echo '<button class="button button-primary" type="button" id="hmpcv2-load-woo-preset">Preset Yükle</button>';
+        echo '<label style="margin-left:12px;">';
+        echo '<input type="checkbox" id="hmpcv2-seed-all" />';
+        echo ' Seed all languages';
+        echo '</label>';
         echo '</div>';
         echo '<div id="hmpcv2-woo-results" class="hmpcv2-woo-results"></div>';
         echo '</div>';
