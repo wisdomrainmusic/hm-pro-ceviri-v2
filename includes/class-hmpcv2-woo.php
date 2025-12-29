@@ -29,6 +29,53 @@ final class HMPCv2_Woo {
 
 		// My Account menu item labels (Addresses etc.)
 		add_filter('woocommerce_account_menu_items', array(__CLASS__, 'filter_myaccount_menu_items'), 20, 1);
+
+		// Checkout: payment gateway descriptions/instructions (DB-based)
+		add_filter('woocommerce_available_payment_gateways', array(__CLASS__, 'filter_available_payment_gateways'), 20, 1);
+
+		// Checkout: privacy policy text (DB-based)
+		add_filter('woocommerce_get_privacy_policy_text', array(__CLASS__, 'filter_privacy_policy_text'), 20, 1);
+		add_filter('woocommerce_checkout_privacy_policy_text', array(__CLASS__, 'filter_privacy_policy_text'), 20, 1);
+	}
+
+	public static function filter_available_payment_gateways($gateways) {
+		if (is_admin()) {
+			return $gateways;
+		}
+
+		$lang = self::current_lang_code();
+		if ($lang !== 'en') {
+			return $gateways;
+		}
+
+		// Bank transfer (BACS) text is stored in DB in current site language (often Turkish).
+		// Force EN output when /en/ is active.
+		if (isset($gateways['bacs']) && is_object($gateways['bacs'])) {
+			$en_desc = 'Make your payment directly into our bank account. Please use your Order ID as the payment reference. Your order will not be shipped until the funds have cleared in our account.';
+			$en_instr = $en_desc;
+
+			// description on checkout
+			$gateways['bacs']->description = $en_desc;
+
+			// instructions shown on thankyou + emails
+			$gateways['bacs']->instructions = $en_instr;
+		}
+
+		return $gateways;
+	}
+
+	public static function filter_privacy_policy_text($text) {
+		if (is_admin()) {
+			return $text;
+		}
+
+		$lang = self::current_lang_code();
+		if ($lang !== 'en') {
+			return $text;
+		}
+
+		// Woo replaces [privacy_policy] with the link automatically.
+		return 'Your personal data will be used to process your order, support your experience throughout this website, and for other purposes described in our [privacy_policy].';
 	}
 
 	// ---------- Meta keys ----------
