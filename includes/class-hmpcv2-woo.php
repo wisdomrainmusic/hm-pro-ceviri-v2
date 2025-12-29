@@ -1,6 +1,7 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
+
 final class HMPCv2_Woo {
 
 	public static function init() {
@@ -398,10 +399,17 @@ final class HMPCv2_Woo {
 		}
 
 		if ($lang === '') return $translation;
+		if (is_admin()) return $translation;
+
+		// EN master fallback:
+		// WooCommerce TR language pack may translate $translation into Turkish even under /en/.
+		// If EN preset is missing a key, fall back to original source string ($text).
+		if ($lang === 'en' && $domain === 'woocommerce') {
+			return $text;
+		}
 
 		$dict = self::woo_dict();
 		if (!isset($dict[$lang]) || !isset($dict[$lang][$domain])) return $translation;
-		if ($domain === 'woocommerce' && !self::is_on_woo_core_page()) return $translation;
 		$key = self::dict_key_simple((string) $text);
 
 		if (isset($dict[$lang]) && isset($dict[$lang][$domain]) && isset($dict[$lang][$domain][$key])) {
@@ -418,10 +426,15 @@ final class HMPCv2_Woo {
 			error_log('[HMPCv2][woo_gettext_context] context=' . $context . ' text=' . $text . ' translation=' . $translation);
 		}
 		if ($lang === '') return $translation;
+		if (is_admin()) return $translation;
+
+		// EN master fallback for contextual gettext too.
+		if ($lang === 'en' && $domain === 'woocommerce') {
+			return $text;
+		}
 
 		$dict = self::woo_dict();
 		if (!isset($dict[$lang]) || !isset($dict[$lang][$domain])) return $translation;
-		if ($domain === 'woocommerce' && !self::is_on_woo_core_page()) return $translation;
 		$key = self::dict_key_context((string) $context, (string) $text);
 
 		if (isset($dict[$lang]) && isset($dict[$lang][$domain]) && isset($dict[$lang][$domain][$key])) {
