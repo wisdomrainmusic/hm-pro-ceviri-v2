@@ -170,6 +170,18 @@ class HMPCv2_Woo_Presets {
                     'privacy_policy_text' => 'Your personal data will be used to process your order, support your experience throughout this website, and for other purposes described in our [privacy_policy].',
                 ),
             ),
+            'checkout_fields' => array(
+                'label' => 'Checkout – Fields (Labels)',
+                'domains' => array(
+                    'checkout_fields' => array(
+                        'billing_city_label' => 'Town / City',
+                        'billing_phone_label' => 'Phone',
+                        'billing_company_label' => 'Company name (optional)',
+                        'order_comments_label' => 'Order notes (optional)',
+                        'coupon_notice_text' => 'Have a coupon? Click here to enter your code.',
+                    ),
+                ),
+            ),
             'woo_account' => array(
                 'label' => 'Woo Core – My Account',
                 'domains' => array(
@@ -475,8 +487,12 @@ final class HMPCv2_Admin_Translations {
             wp_send_json_error(array('message' => 'bad_lang'), 400);
         }
 
-        $meta_key = '_hmpcv2_title_' . $lang;
+        $meta_key = '_hmpcv2_' . $lang . '_title';
+        $legacy_key = '_hmpcv2_title_' . $lang;
         $title = (string) get_post_meta($page_id, $meta_key, true);
+        if ($title === '') {
+            $title = (string) get_post_meta($page_id, $legacy_key, true);
+        }
 
         wp_send_json_success(array(
             'page_id' => $page_id,
@@ -501,13 +517,16 @@ final class HMPCv2_Admin_Translations {
             wp_send_json_error(array('message' => 'bad_lang'), 400);
         }
 
-        $meta_key = '_hmpcv2_title_' . $lang;
+        $meta_key = '_hmpcv2_' . $lang . '_title';
+        $legacy_key = '_hmpcv2_title_' . $lang;
         $title = trim(wp_strip_all_tags($title));
 
         if ($title === '') {
             delete_post_meta($page_id, $meta_key);
+            delete_post_meta($page_id, $legacy_key);
         } else {
             update_post_meta($page_id, $meta_key, $title);
+            delete_post_meta($page_id, $legacy_key);
         }
 
         wp_send_json_success(array('saved' => true));
@@ -700,7 +719,10 @@ final class HMPCv2_Admin_Translations {
 
         $set = $sets[$preset];
         $seed_all = !empty($_POST['seed_all']);
-        $all_langs = array('tr','en','de','fr','es','it','pt','nl','pl','cs','sk','hu','ro','bg','el','sv','no','da','fi','is','et','lv','lt','sl','hr','sr','bs','mk','sq','uk','ru','be','ga','cy','eu','ca','gl','mt','lb','ka','hy','az','ar','fa','ku','zh');
+        $all_langs = class_exists('HMPCv2_Langs') && method_exists('HMPCv2_Langs', 'enabled_langs') ? HMPCv2_Langs::enabled_langs() : array();
+        if (empty($all_langs)) {
+            $all_langs = array('tr','en','de','fr','es','it','pt','nl','pl','cs','sk','hu','ro','bg','el','sv','no','da','fi','is','et','lv','lt','sl','hr','sr','bs','mk','sq','uk','ru','be','ga','cy','eu','ca','gl','mt','lb','ka','hy','az','ar','fa','ku','zh');
+        }
         $langs_to_seed = $seed_all ? $all_langs : array($lang);
 
         if (isset($set['group']) && $set['group'] === 'misc') {
@@ -730,32 +752,34 @@ final class HMPCv2_Admin_Translations {
         $added = 0;
 
         if (isset($set['domains']) && is_array($set['domains'])) {
-            foreach ($set['domains'] as $domain => $strings) {
-                $domain = sanitize_text_field((string) $domain);
-                if (!isset($dict[$lang][$domain]) || !is_array($dict[$lang][$domain])) {
-                    $dict[$lang][$domain] = array();
-                }
+            foreach ($langs_to_seed as $seed_lang) {
+                foreach ($set['domains'] as $domain => $strings) {
+                    $domain = sanitize_text_field((string) $domain);
+                    if (!isset($dict[$seed_lang][$domain]) || !is_array($dict[$seed_lang][$domain])) {
+                        $dict[$seed_lang][$domain] = array();
+                    }
 
-                foreach ($strings as $k => $v) {
-                    // Support both:
-                    // 1) numeric arrays: [ 'Cart', 'Total', ... ]  => translation defaults to original
-                    // 2) associative arrays: [ 'Gönderim' => 'Shipping', ... ]
-                    $is_map = !is_int($k);
+                    foreach ($strings as $k => $v) {
+                        // Support both:
+                        // 1) numeric arrays: [ 'Cart', 'Total', ... ]  => translation defaults to original
+                        // 2) associative arrays: [ 'Gönderim' => 'Shipping', ... ]
+                        $is_map = !is_int($k);
 
-                    $original = $is_map ? (string) $k : (string) $v;
-                    $translation = $is_map ? (string) $v : (string) $v;
+                        $original = $is_map ? (string) $k : (string) $v;
+                        $translation = $is_map ? (string) $v : (string) $v;
 
-                    $original = sanitize_text_field($original);
-                    $translation = sanitize_text_field($translation);
+                        $original = sanitize_text_field($original);
+                        $translation = sanitize_text_field($translation);
 
-                    if ($original === '') continue;
+                        if ($original === '') continue;
 
-                    $key = self::hmpcv2_woo_dict_key($original, '');
+                        $key = self::hmpcv2_woo_dict_key($original, '');
 
-                    // Seed only if missing (do not overwrite admin edits)
-                    if (!isset($dict[$lang][$domain][$key])) {
-                        $dict[$lang][$domain][$key] = ($translation !== '' ? $translation : $original);
-                        $added++;
+                        // Seed only if missing (do not overwrite admin edits)
+                        if (!isset($dict[$seed_lang][$domain][$key])) {
+                            $dict[$seed_lang][$domain][$key] = ($translation !== '' ? $translation : $original);
+                            $added++;
+                        }
                     }
                 }
             }
@@ -1305,6 +1329,7 @@ final class HMPCv2_Admin_Translations {
         echo '<option value="cartflows">cartflows</option>';
         echo '<option value="cartflows-pro">cartflows-pro</option>';
         echo '<option value="checkout_misc">Checkout – Misc (Gateway + Privacy)</option>';
+        echo '<option value="checkout_fields">Checkout – Fields (Labels)</option>';
         echo '<option value="default">default</option>';
         echo '</select></label>';
         echo '<label>Search<br><input type="text" id="hmpcv2-woo-search" placeholder="Search strings" style="width:240px;" /></label>';
@@ -1521,8 +1546,16 @@ final class HMPCv2_Admin_Translations {
         $out = '<div class="hmpcv2-actions" data-source="' . esc_attr($base_id) . '" data-group="' . esc_attr($group_id) . '" data-map="' . esc_attr(wp_json_encode($map)) . '">';
 
         if ($suggested_type === 'woo_core') {
-            $out .= '<button type="button" class="button button-small" data-action="hmpcv2-woo-title-edit" data-lang="tr">Edit TR</button> ';
-            $out .= '<button type="button" class="button button-small" data-action="hmpcv2-woo-title-edit" data-lang="en">Edit EN</button> ';
+            foreach ($enabled as $code) {
+                $key = '_hmpcv2_' . strtolower($code) . '_title';
+                $legacy_key = '_hmpcv2_title_' . strtolower($code);
+                $value = (string) get_post_meta($source_id, $key, true);
+                if ($value === '') {
+                    $value = (string) get_post_meta($source_id, $legacy_key, true);
+                }
+                $label = ($value !== '') ? 'Edit' : 'Create';
+                $out .= '<button type="button" class="button button-small" data-action="hmpcv2-woo-title-edit" data-lang="' . esc_attr($code) . '">' . esc_html($label . ' ' . strtoupper($code)) . '</button> ';
+            }
             $out .= '</div>';
             return $out;
         }
