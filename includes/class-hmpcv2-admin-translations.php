@@ -5,6 +5,100 @@ class HMPCv2_Woo_Presets {
 
     public static function get_sets() {
         return array(
+            /* ================================
+             * DE — German (seeded from EN)
+             * ================================ */
+
+            'de' => array(
+                'label' => 'DE — German (seeded from EN)',
+                'domains' => array(
+                    'woocommerce' => array(
+                        'Cart totals' => 'Warenkorb-Summen',
+                        'Cart Total Test' => 'Warenkorb-Summen Test',
+                        'Apply coupon' => 'Gutschein anwenden',
+                        'APPLY TEST' => 'TEST ANWENDEN',
+                        'Cart' => 'Warenkorb',
+                        'Coupon code' => 'Gutscheincode',
+                        'Update cart' => 'Warenkorb aktualisieren',
+                        'Proceed to checkout' => 'Zur Kasse',
+                        'Subtotal' => 'Zwischensumme',
+                        'Shipping' => 'Versand',
+                        'Total' => 'Gesamt',
+                        'Product' => 'Produkt',
+                        'Price' => 'Preis',
+                        'Quantity' => 'Menge',
+                        'Remove this item' => 'Diesen Artikel entfernen',
+                        'Your cart is currently empty.' => 'Dein Warenkorb ist derzeit leer.',
+                        'Return to shop' => 'Zurück zum Shop',
+                        'Checkout' => 'Kasse',
+                        'Billing details' => 'Rechnungsdetails',
+                        'Additional information' => 'Zusätzliche Informationen',
+                        'Your order' => 'Deine Bestellung',
+                        'Place order' => 'Bestellung aufgeben',
+                        'Apply' => 'Anwenden',
+                        'Privacy policy' => 'Datenschutzerklärung',
+                        'My account' => 'Mein Konto',
+                        'Dashboard' => 'Dashboard',
+                        'Orders' => 'Bestellungen',
+                        'Downloads' => 'Downloads',
+                        'Addresses' => 'Adressen',
+                        'Account details' => 'Kontodetails',
+                        'Logout' => 'Abmelden',
+                        'Log out' => 'Abmelden',
+                        'Hello %1$s (not %1$s? Log out)' => 'Hallo %1$s (nicht %1$s? Abmelden)',
+                        'Hello %1$s (not %2$s? Log out)' => 'Hallo %1$s (nicht %2$s? Abmelden)',
+                        'From your account dashboard you can view your recent orders, manage your shipping and billing addresses, and edit your password and account details.' =>
+                            'In deinem Kontobereich kannst du deine letzten Bestellungen ansehen, deine Versand- und Rechnungsadressen verwalten sowie Passwort und Kontodetails ändern.',
+                        'No order has been made yet.' => 'Es wurde noch keine Bestellung aufgegeben.',
+                        'Browse products' => 'Produkte ansehen',
+                        'Free shipping' => 'Kostenloser Versand',
+                        'Shipping to %s.' => 'Versand nach %s.',
+                        'Change address' => 'Adresse ändern',
+                        'Have a coupon? Click here to enter your code.' =>
+                            'Hast du einen Gutschein? Klicke hier, um deinen Code einzugeben.',
+                        'Direct bank transfer' => 'Direkte Banküberweisung',
+                        'Make your payment directly into our bank account. Please use your Order ID as the payment reference. Your order will not be shipped until the funds have cleared in our (account).' =>
+                            'Bitte überweise den Betrag direkt auf unser Bankkonto. Verwende deine Bestellnummer als Verwendungszweck. Deine Bestellung wird erst versendet, nachdem der Betrag auf unserem Konto eingegangen ist.',
+                        'Your personal data will be used to process your order, support your experience throughout this website, and for other purposes described in our privacy policy.' =>
+                            'Deine personenbezogenen Daten werden verwendet, um deine Bestellung zu bearbeiten, dein Nutzererlebnis auf dieser Website zu verbessern und für weitere Zwecke, die in unserer Datenschutzerklärung beschrieben sind.',
+                        'Company name (optional)' => 'Firmenname (optional)',
+                        'Country / Region' => 'Land/Region',
+                        'Turkey' => 'Türkei',
+                        'Street address' => 'Straße und Hausnummer',
+                        'House number and street name' => 'Hausnummer und Straßenname',
+                        'Apartment, suite, unit, etc. (optional)' => 'Wohnung, Suite, Einheit usw. (optional)',
+                        'Postcode / ZIP' => 'Postleitzahl',
+                        'Town / City' => 'Ort/Stadt',
+                        'Phone' => 'Telefon',
+                        'Email address' => 'E-Mail-Adresse',
+                        'Ship to a different address?' => 'An eine andere Adresse liefern?',
+                        'Order notes (optional)' => 'Bestellhinweise (optional)',
+                        'Notes about your order, e.g. special notes for delivery.' =>
+                            'Hinweise zu deiner Bestellung, z. B. besondere Hinweise zur Lieferung.',
+                        'No downloads available yet.' => 'Noch keine Downloads verfügbar.',
+                        'The following addresses will be used on the checkout page by default.' =>
+                            'Die folgenden Adressen werden standardmäßig auf der Kassenseite verwendet.',
+                        'Billing address' => 'Rechnungsadresse',
+                        'Shipping address' => 'Lieferadresse',
+                        'Add billing address' => 'Rechnungsadresse hinzufügen',
+                        'Add shipping address' => 'Lieferadresse hinzufügen',
+                        'You have not set up this type of address yet.' =>
+                            'Du hast diese Art von Adresse noch nicht eingerichtet.',
+                        'First name' => 'Vorname',
+                        'Last name' => 'Nachname',
+                        'Display name' => 'Anzeigename',
+                        'Display name is how your name will be displayed in the account section and in reviews' =>
+                            'Der Anzeigename ist der Name, der im Kontobereich und in Bewertungen angezeigt wird.',
+                        'Password change' => 'Passwort ändern',
+                        'Current password (leave blank to leave unchanged)' =>
+                            'Aktuelles Passwort (leer lassen, um es nicht zu ändern)',
+                        'New password (leave blank to leave unchanged)' =>
+                            'Neues Passwort (leer lassen, um es nicht zu ändern)',
+                        'Confirm new password' => 'Neues Passwort bestätigen',
+                        'Save changes' => 'Änderungen speichern',
+                    ),
+                ),
+            ),
             'woo_cart' => array(
                 'label' => 'Woo Core – Cart',
                 'domains' => array(
