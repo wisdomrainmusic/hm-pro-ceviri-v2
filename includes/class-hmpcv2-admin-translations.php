@@ -24,6 +24,10 @@ class HMPCv2_Woo_Presets {
                         'Remove this item',
                         'Your cart is currently empty.',
                         'Return to shop',
+                        // TR leftovers seen on Cart totals box (static only)
+                        'Gönderim',
+                        'Ücretsiz gönderim',
+                        'Adresi değiştirin',
                     ),
                 ),
             ),
@@ -42,6 +46,40 @@ class HMPCv2_Woo_Presets {
                         'Shipping',
                         'Total',
                         'Privacy policy',
+                        // Checkout title / coupon bar
+                        'Ödeme Sayfası',
+                        'Kuponunuz var mı? Kupon kodunuzu girmek için buraya tıklayın',
+                        // Section headers / order box
+                        'Fatura detayları',
+                        'Siparişiniz',
+                        'Ürün',
+                        'Ara Toplam',
+                        'Gönderim',
+                        'Toplam',
+                        // Payment method + instructions (BACS)
+                        'Banka havalesi/EFT',
+                        'Ödemenizi doğrudan banka hesabımıza yapınız. Lütfen ilgili Sipariş Numarasını ödemenizin açıklama kısmına yazınız. Ödemeniz onaylanmadıkça siparişiniz gönderilmeyecektir.',
+                        // Privacy text
+                        'Kişisel verileriniz siparişinizi işleme almak, bu web sitesindeki deneyimlerinizi desteklemek ve gizlilik ilkesi sayfamızda açıklanan diğer amaçlar için kullanılacaktır.',
+                        // Button
+                        'Siparişi onayla',
+                        // Billing fields (labels + placeholders; avoid city-specific values)
+                        'Firma adı (isteğe bağlı)',
+                        'Ülke',
+                        'Türkiye',
+                        'Sokak adresi',
+                        'Bina numarası ve sokak adı',
+                        'Apartman, daire, oda vb. (isteğe bağlı)',
+                        'Posta kodu',
+                        'İlçe / Semt',
+                        'Şehir',
+                        'Telefon',
+                        'E-posta adresi',
+                        // Ship to different address
+                        'Farklı bir adrese gönderilsin mi?',
+                        // Notes
+                        'Siparişinizle ilgili notlar (isteğe bağlı)',
+                        'Siparişiniz ile ilgili notlar. örn. teslimat için özel notlar.',
                     ),
                 ),
             ),
@@ -60,25 +98,30 @@ class HMPCv2_Woo_Presets {
                         'From your account dashboard you can view your recent orders, manage your shipping and billing addresses, and edit your password and account details.',
                         'No order has been made yet.',
                         'Browse products',
-                    ),
-                ),
-            ),
-            'cartflows_checkout' => array(
-                'label' => 'CartFlows – Checkout',
-                'domains' => array(
-                    'cartflows' => array(
-                        'Contact',
-                        'Payment',
-                        'Coupon Code',
-                        'Apply',
-                        'Place Order',
-                    ),
-                    'cartflows-pro' => array(
-                        'Contact',
-                        'Payment',
-                        'Coupon Code',
-                        'Apply',
-                        'Place Order',
+                        // Dashboard hello + description seen as TR while browsing EN
+                        'Merhaba %1$s (%2$s değil misiniz? Çıkış yapın)',
+                        'Hesap panonuzdan son siparişlerinizi görüntüleyebilir, gönderim ve fatura adreslerinizi yönetebilir ve şifreniz ile hesap ayrıntılarınızı düzenleyebilirsiniz.',
+                        // Downloads
+                        'Henüz indirilecek bir ürün yok.',
+                        // Addresses
+                        'Belirttiğiniz adresler ödeme sayfasında varsayılan olarak kullanılacaktır.',
+                        'Fatura adresi',
+                        'Gönderim adresi',
+                        'Fatura adresi ekle',
+                        'Gönderim adresi ekle',
+                        'Henüz bu tür bir adres bilgisi düzenlenmemiş.',
+                        // Account details fields / password section
+                        'Ad',
+                        'Soyad',
+                        'Görünen ad',
+                        'Adınız hesap bölümünde ve değerlendirmelerde bu şekilde görüntülenir',
+                        'E-posta adresi',
+                        'Parola değiştirme',
+                        'Mevcut parola (değişmeden bırakmak için boş bırakın)',
+                        'Yeni parola (değişmeden bırakmak için boş bırakın)',
+                        'Yeni parolayı onayla',
+                        'DEĞİŞİKLİKLERİ KAYDET',
+                        'Oturumu kapat',
                     ),
                 ),
             ),
