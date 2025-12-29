@@ -82,6 +82,21 @@ final class HMPCv2_Resolver {
 
         $target_lang = HMPCv2_Langs::sanitize_lang_code($target_lang, $default);
 
+        $current_id = (int) get_queried_object_id();
+        if (is_front_page() && $current_id < 1) {
+            $current_id = (int) get_option('page_on_front');
+        }
+
+        if ($current_id > 0) {
+            $target_id = (int) self::resolve_translation_post_id($current_id, $target_lang);
+            if ($target_id > 0) {
+                $permalink = get_permalink($target_id);
+                if ($permalink) {
+                    return trailingslashit($permalink);
+                }
+            }
+        }
+
         $uri = isset($_SERVER['REQUEST_URI']) ? (string) $_SERVER['REQUEST_URI'] : '/';
         $parts = wp_parse_url($uri);
         $path  = isset($parts['path']) ? (string) $parts['path'] : '/';
