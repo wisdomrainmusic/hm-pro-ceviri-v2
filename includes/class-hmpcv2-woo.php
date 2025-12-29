@@ -16,6 +16,7 @@ final class HMPCv2_Woo {
 		add_filter('the_content', array(__CLASS__, 'filter_product_content'), 20);
 		add_filter('woocommerce_short_description', array(__CLASS__, 'filter_product_short_description'), 20);
 		add_filter('woocommerce_get_endpoint_url', array(__CLASS__, 'filter_woocommerce_endpoint_url'), 10, 4);
+		add_filter('woocommerce_get_myaccount_page_permalink', array(__CLASS__, 'filter_myaccount_page_permalink'), 10, 1);
 
 		// Attribute label/value translation (display layer)
 		add_filter('woocommerce_attribute_label', array(__CLASS__, 'filter_attribute_label'), 20, 3);
@@ -511,5 +512,34 @@ final class HMPCv2_Woo {
 		}
 
 		return $scheme . $host . $port . $new_path . $query . $fragment;
+	}
+
+	public static function filter_myaccount_page_permalink($url) {
+		if (!is_string($url) || $url === '') return $url;
+
+		$lang = self::current_lang_code();
+		if ($lang === 'tr') return $url;
+
+		$parts = wp_parse_url($url);
+		if (empty($parts['path'])) return $url;
+
+		$path = $parts['path'];
+
+		if (preg_match('#^/' . preg_quote($lang, '#') . '(/|$)#i', $path)) {
+			return $url;
+		}
+
+		$path = '/' . $lang . rtrim($path, '/');
+		$path = preg_replace('#//+#', '/', $path);
+
+		$rebuilt =
+			(isset($parts['scheme']) ? $parts['scheme'] . '://' : '') .
+			($parts['host'] ?? '') .
+			(isset($parts['port']) ? ':' . $parts['port'] : '') .
+			$path .
+			(isset($parts['query']) ? '?' . $parts['query'] : '') .
+			(isset($parts['fragment']) ? '#' . $parts['fragment'] : '');
+
+		return $rebuilt;
 	}
 }
