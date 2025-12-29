@@ -39,43 +39,39 @@ final class HMPCv2_Woo {
 	}
 
 	public static function filter_available_payment_gateways($gateways) {
-		if (is_admin()) {
-			return $gateways;
-		}
+		if (is_admin()) return $gateways;
 
 		$lang = self::current_lang_code();
-		if ($lang !== 'en') {
-			return $gateways;
-		}
+		if ($lang === '') return $gateways;
 
-		// Bank transfer (BACS) text is stored in DB in current site language (often Turkish).
-		// Force EN output when /en/ is active.
+		// group: checkout, key: bacs_description / bacs_instructions
+		$desc = self::misc_get($lang, 'checkout', 'bacs_description');
+		$instr = self::misc_get($lang, 'checkout', 'bacs_instructions');
+
+		// fallback: EN misc (master)
+		if ($desc === '') $desc = self::misc_get('en', 'checkout', 'bacs_description');
+		if ($instr === '') $instr = self::misc_get('en', 'checkout', 'bacs_instructions');
+
 		if (isset($gateways['bacs']) && is_object($gateways['bacs'])) {
-			$en_desc = 'Make your payment directly into our bank account. Please use your Order ID as the payment reference. Your order will not be shipped until the funds have cleared in our account.';
-			$en_instr = $en_desc;
-
-			// description on checkout
-			$gateways['bacs']->description = $en_desc;
-
-			// instructions shown on thankyou + emails
-			$gateways['bacs']->instructions = $en_instr;
+			if ($desc !== '') $gateways['bacs']->description = $desc;
+			if ($instr !== '') $gateways['bacs']->instructions = $instr;
 		}
 
 		return $gateways;
 	}
 
 	public static function filter_privacy_policy_text($text) {
-		if (is_admin()) {
-			return $text;
-		}
+		if (is_admin()) return $text;
 
 		$lang = self::current_lang_code();
-		if ($lang !== 'en') {
-			return $text;
-		}
+		if ($lang === '') return $text;
 
-		// Woo replaces [privacy_policy] with the link automatically.
-		return 'Your personal data will be used to process your order, support your experience throughout this website, and for other purposes described in our [privacy_policy].';
+		$v = self::misc_get($lang, 'checkout', 'privacy_policy_text');
+
+		// fallback: EN master
+		if ($v === '') $v = self::misc_get('en', 'checkout', 'privacy_policy_text');
+
+		return ($v !== '') ? $v : $text;
 	}
 
 	// ---------- Meta keys ----------
@@ -131,6 +127,20 @@ final class HMPCv2_Woo {
 		$dict = get_option('hmpcv2_woo_dict', array());
 		$cache = is_array($dict) ? $dict : array();
 		return $cache;
+	}
+
+	private static function misc_dict(): array {
+		$dict = get_option('hmpcv2_misc_dict', array());
+		return is_array($dict) ? $dict : array();
+	}
+
+	private static function misc_get($lang, $group, $key): string {
+		$dict = self::misc_dict();
+		if (isset($dict[$lang][$group][$key])) {
+			$v = (string) $dict[$lang][$group][$key];
+			if ($v !== '') return $v;
+		}
+		return '';
 	}
 
 	private static function dict_key_simple(string $text): string {

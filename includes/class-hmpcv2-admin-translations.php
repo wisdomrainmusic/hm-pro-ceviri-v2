@@ -571,8 +571,41 @@ final class HMPCv2_Admin_Translations {
 
         update_option('hmpcv2_woo_dict', $dict, false);
 
+        $added_misc = 0;
+        if (isset($sets[$preset]['misc']) && is_array($sets[$preset]['misc'])) {
+            $misc = get_option('hmpcv2_misc_dict', array());
+            $misc = is_array($misc) ? $misc : array();
+
+            foreach ($sets[$preset]['misc'] as $group => $items) {
+                $group = sanitize_text_field((string) $group);
+                if ($group === '' || !is_array($items)) continue;
+
+                if (!isset($misc[$lang][$group]) || !is_array($misc[$lang][$group])) {
+                    $misc[$lang][$group] = array();
+                }
+
+                foreach ($items as $key => $value) {
+                    $entry_key = is_int($key) ? (string) $value : (string) $key;
+                    $entry_value = (string) $value;
+
+                    $entry_key = sanitize_text_field($entry_key);
+                    $entry_value = sanitize_text_field($entry_value);
+
+                    if ($entry_key === '') continue;
+
+                    if (!isset($misc[$lang][$group][$entry_key])) {
+                        $misc[$lang][$group][$entry_key] = $entry_value;
+                        $added_misc++;
+                    }
+                }
+            }
+
+            update_option('hmpcv2_misc_dict', $misc, false);
+        }
+
         wp_send_json_success(array(
             'added' => $added,
+            'added_misc' => $added_misc,
             'preset' => $preset,
         ));
     }
