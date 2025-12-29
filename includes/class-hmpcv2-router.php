@@ -170,6 +170,11 @@ class HMPCv2_Router {
         add_filter('post_type_link', array(__CLASS__, 'filter_post_type_link_to_current_lang'), 20, 2);
         add_filter('post_link', array(__CLASS__, 'filter_post_link_to_current_lang'), 20, 3);
         add_filter('term_link', array(__CLASS__, 'filter_term_link_to_current_lang'), 20, 3);
+        /**
+         * Woo URLs: keep checkout/cart in the current language (fixes Proceed to Checkout).
+         */
+        add_filter('woocommerce_get_checkout_url', array(__CLASS__, 'filter_woocommerce_url_to_current_lang'), 20, 1);
+        add_filter('woocommerce_get_cart_url', array(__CLASS__, 'filter_woocommerce_url_to_current_lang'), 20, 1);
 
         // IMPORTANT: Router behavior must be FRONTEND-only
         if (is_admin()) {
@@ -333,6 +338,14 @@ class HMPCv2_Router {
         }
 
         return $termlink;
+    }
+
+    /**
+     * Filter Woo-generated URLs (checkout/cart) to keep current language prefix.
+     */
+    public static function filter_woocommerce_url_to_current_lang($url) {
+        if (empty($url) || !is_string($url)) return $url;
+        return self::apply_current_lang_to_url($url);
     }
 
     public static function add_query_vars($vars) {
