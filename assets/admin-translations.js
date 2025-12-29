@@ -16,6 +16,10 @@ jQuery(function ($) {
     $(".hmpcv2-tab").removeClass("active");
     $(".nav-tab[data-tab='" + tab + "']").addClass("nav-tab-active");
     $("#hmpcv2-tab-" + tab).addClass("active");
+    if (tab === "woo-strings") {
+      ensureWooDefaults();
+      fetchWooList();
+    }
   }
 
   $(document).on("click", ".nav-tab", function (e) {
@@ -24,6 +28,148 @@ jQuery(function ($) {
   });
 
   setTab("content");
+
+  function ensureWooDefaults() {
+    const $lang = $("#hmpcv2-woo-lang");
+    const $domain = $("#hmpcv2-woo-domain");
+    if ($lang.length && !$lang.val()) {
+      $lang.val("en");
+    }
+    if ($lang.length && $lang.val() === null) {
+      $lang.val("en");
+    }
+    if ($domain.length && !$domain.val()) {
+      $domain.val("woocommerce");
+    }
+  }
+
+  function wooPayload(extra) {
+    return $.extend(
+      {
+        nonce: data.nonce,
+        lang: $("#hmpcv2-woo-lang").val() || "en",
+        domain: $("#hmpcv2-woo-domain").val() || "woocommerce"
+      },
+      extra || {}
+    );
+  }
+
+  function renderWooResults(items) {
+    const $target = $("#hmpcv2-woo-results");
+    if (!items || !items.length) {
+      $target.html("<p>No strings found.</p>");
+      return;
+    }
+
+    const $wrap = $("<div></div>");
+    items.forEach(function (item) {
+      const original = item.original || "";
+      const context = item.context || "";
+      const translation = item.translation || "";
+      const contextHtml = context ? "<div class='hmpcv2-woo-row-meta'>Context: " + context + "</div>" : "";
+      const $row = $(
+        "<div class='hmpcv2-woo-row'>" +
+          "<div class='hmpcv2-woo-row-main'>" +
+            "<strong>" + original + "</strong>" +
+            contextHtml +
+            "<div class='hmpcv2-woo-row-translation'>" + translation + "</div>" +
+          "</div>" +
+          "<div class='hmpcv2-woo-actions'>" +
+            "<button type='button' class='button button-small hmpcv2-woo-delete'>Delete</button>" +
+          "</div>" +
+        "</div>"
+      );
+      $row.data("original", original);
+      $row.data("context", context);
+      $wrap.append($row);
+    });
+
+    $target.html($wrap);
+  }
+
+  function fetchWooList() {
+    const q = $("#hmpcv2-woo-search").val() || "";
+    $.post(data.ajax_url, wooPayload({ action: "hmpcv2_woo_dict_list", q: q }))
+      .done(function (res) {
+        if (res && res.success && res.data && res.data.items) {
+          renderWooResults(res.data.items);
+        } else {
+          $("#hmpcv2-woo-results").html("<p>No strings found.</p>");
+        }
+      })
+      .fail(function () {
+        $("#hmpcv2-woo-results").html("<p>Error loading strings.</p>");
+      });
+  }
+
+  let wooSearchTimer = null;
+  $(document).on("input", "#hmpcv2-woo-search", function () {
+    clearTimeout(wooSearchTimer);
+    wooSearchTimer = setTimeout(fetchWooList, 300);
+  });
+
+  $(document).on("change", "#hmpcv2-woo-lang, #hmpcv2-woo-domain", function () {
+    fetchWooList();
+  });
+
+  $(document).on("click", "#hmpcv2-woo-save", function () {
+    const original = $("#hmpcv2-woo-add-original").val() || "";
+    const context = $("#hmpcv2-woo-add-context").val() || "";
+    const translation = $("#hmpcv2-woo-add-translation").val() || "";
+    const $btn = $(this);
+
+    $btn.prop("disabled", true).text("Saving…");
+    $.post(
+      data.ajax_url,
+      wooPayload({
+        action: "hmpcv2_woo_dict_save",
+        original: original,
+        context: context,
+        translation: translation
+      })
+    )
+      .done(function (res) {
+        if (!res || !res.success) {
+          alert("Save failed");
+          return;
+        }
+        if (translation.trim() === "") {
+          $("#hmpcv2-woo-add-translation").val("");
+        }
+        fetchWooList();
+      })
+      .fail(function () {
+        alert("Save failed");
+      })
+      .always(function () {
+        $btn.prop("disabled", false).text("Save");
+      });
+  });
+
+  $(document).on("click", ".hmpcv2-woo-delete", function () {
+    const $row = $(this).closest(".hmpcv2-woo-row");
+    const original = $row.data("original") || "";
+    const context = $row.data("context") || "";
+
+    $.post(
+      data.ajax_url,
+      wooPayload({
+        action: "hmpcv2_woo_dict_delete",
+        original: original,
+        context: context
+      })
+    )
+      .done(function (res) {
+        if (!res || !res.success) {
+          alert("Delete failed");
+          return;
+        }
+        fetchWooList();
+      })
+      .fail(function () {
+        alert("Delete failed");
+      });
+  });
 
   $(".hmpcv2-suggested").each(function () {
     const $card = $(this);

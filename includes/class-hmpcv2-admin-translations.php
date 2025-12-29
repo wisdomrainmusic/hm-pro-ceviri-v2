@@ -23,6 +23,9 @@ final class HMPCv2_Admin_Translations {
     public static function register_ajax_hooks() {
         add_action('wp_ajax_hmpcv2_get_woo_page_title', array(__CLASS__, 'ajax_get_woo_page_title'));
         add_action('wp_ajax_hmpcv2_save_woo_page_title', array(__CLASS__, 'ajax_save_woo_page_title'));
+        add_action('wp_ajax_hmpcv2_woo_dict_list', array(__CLASS__, 'ajax_woo_dict_list'));
+        add_action('wp_ajax_hmpcv2_woo_dict_save', array(__CLASS__, 'ajax_woo_dict_save'));
+        add_action('wp_ajax_hmpcv2_woo_dict_delete', array(__CLASS__, 'ajax_woo_dict_delete'));
     }
 
     public static function menu() {
@@ -124,6 +127,15 @@ final class HMPCv2_Admin_Translations {
             .hmpcv2-modal h2{margin-top:0}
             .hmpcv2-modal input[type="text"]{width:100%;margin:8px 0 12px}
             .hmpcv2-modal-actions{display:flex;gap:8px;justify-content:flex-end}
+            .hmpcv2-woo-results{margin-top:12px}
+            .hmpcv2-woo-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px;border:1px solid #e2e2e2;border-radius:4px;background:#fff;margin-bottom:8px}
+            .hmpcv2-woo-row-main{flex:1}
+            .hmpcv2-woo-row-meta{font-size:12px;color:#666}
+            .hmpcv2-woo-row-translation{margin-top:4px}
+            .hmpcv2-woo-actions{display:flex;gap:6px}
+            .hmpcv2-woo-form .field{display:flex;flex-direction:column;gap:6px}
+            .hmpcv2-woo-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+            .hmpcv2-woo-form textarea{min-height:70px}
         ');
     }
 
@@ -185,6 +197,59 @@ final class HMPCv2_Admin_Translations {
         return $lang ? $lang : '';
     }
 
+    private static function hmpcv2_supported_langs(): array {
+        if (class_exists('HMPCv2_Langs') && method_exists('HMPCv2_Langs', 'enabled_langs')) {
+            $langs = HMPCv2_Langs::enabled_langs();
+            if (!empty($langs) && is_array($langs)) return $langs;
+        }
+
+        return array(
+            'tr', 'en', 'de', 'fr', 'es', 'it', 'ru', 'ar', 'zh', 'ja', 'ko',
+            'nl', 'pt', 'pl', 'sv', 'no', 'da', 'fi', 'cs', 'el', 'hu', 'ro',
+            'bg', 'uk', 'he', 'hi', 'id', 'th', 'vi',
+        );
+    }
+
+    private static function hmpcv2_woo_dict_key(string $original, string $context = ''): string {
+        $original = trim($original);
+        $context = trim($context);
+        if ($context === '') {
+            return 's:' . $original;
+        }
+        return 'c:' . $context . "\x1F" . $original;
+    }
+
+    private static function hmpcv2_parse_woo_dict_key(string $key): array {
+        if (strpos($key, 'c:') === 0) {
+            $payload = substr($key, 2);
+            $parts = explode("\x1F", $payload, 2);
+            return array(
+                'context' => isset($parts[0]) ? $parts[0] : '',
+                'original' => isset($parts[1]) ? $parts[1] : '',
+            );
+        }
+
+        if (strpos($key, 's:') === 0) {
+            return array(
+                'context' => '',
+                'original' => substr($key, 2),
+            );
+        }
+
+        return array(
+            'context' => '',
+            'original' => $key,
+        );
+    }
+
+    private static function hmpcv2_sanitize_lang_code(string $lang, string $fallback = ''): string {
+        if (class_exists('HMPCv2_Langs') && method_exists('HMPCv2_Langs', 'sanitize_lang_code')) {
+            return HMPCv2_Langs::sanitize_lang_code($lang, $fallback);
+        }
+        $lang = self::hmpcv2_sanitize_lang($lang);
+        return $lang ? $lang : $fallback;
+    }
+
     public static function ajax_get_woo_page_title() {
         check_ajax_referer('hmpcv2_admin_nonce', 'nonce');
         if (!current_user_can('edit_pages')) wp_send_json_error(array('message' => 'forbidden'), 403);
@@ -236,6 +301,115 @@ final class HMPCv2_Admin_Translations {
         }
 
         wp_send_json_success(array('saved' => true));
+    }
+
+    public static function ajax_woo_dict_list() {
+        check_ajax_referer('hmpcv2_admin_nonce', 'nonce');
+        if (!current_user_can('manage_options')) wp_send_json_error(array('message' => 'forbidden'), 403);
+
+        $lang = isset($_POST['lang']) ? self::hmpcv2_sanitize_lang_code((string) $_POST['lang'], '') : '';
+        $domain = isset($_POST['domain']) ? sanitize_text_field((string) $_POST['domain']) : '';
+        $q = isset($_POST['q']) ? sanitize_text_field((string) $_POST['q']) : '';
+
+        if ($lang === '' || $domain === '') wp_send_json_error(array('message' => 'bad_input'), 400);
+
+        $dict = get_option('hmpcv2_woo_dict', array());
+        $dict = is_array($dict) ? $dict : array();
+        $list = array();
+
+        $entries = array();
+        if (isset($dict[$lang]) && is_array($dict[$lang])) {
+            $entries = isset($dict[$lang][$domain]) && is_array($dict[$lang][$domain]) ? $dict[$lang][$domain] : array();
+        }
+
+        $q = trim($q);
+        $limit = 200;
+        foreach ($entries as $key => $translation) {
+            if (count($list) >= $limit) break;
+            $parsed = self::hmpcv2_parse_woo_dict_key((string) $key);
+            $original = isset($parsed['original']) ? (string) $parsed['original'] : '';
+            $context = isset($parsed['context']) ? (string) $parsed['context'] : '';
+            $translation = is_string($translation) ? $translation : '';
+
+            if ($q !== '') {
+                $haystack = $original . ' ' . $context . ' ' . $translation;
+                if (stripos($haystack, $q) === false) continue;
+            }
+
+            $list[] = array(
+                'original' => $original,
+                'context' => $context,
+                'translation' => $translation,
+            );
+        }
+
+        wp_send_json_success(array('items' => $list));
+    }
+
+    public static function ajax_woo_dict_save() {
+        check_ajax_referer('hmpcv2_admin_nonce', 'nonce');
+        if (!current_user_can('manage_options')) wp_send_json_error(array('message' => 'forbidden'), 403);
+
+        $lang = isset($_POST['lang']) ? self::hmpcv2_sanitize_lang_code((string) $_POST['lang'], '') : '';
+        $domain = isset($_POST['domain']) ? sanitize_text_field((string) $_POST['domain']) : '';
+        $original = isset($_POST['original']) ? sanitize_text_field((string) $_POST['original']) : '';
+        $context = isset($_POST['context']) ? sanitize_text_field((string) $_POST['context']) : '';
+        $translation = isset($_POST['translation']) ? sanitize_textarea_field((string) $_POST['translation']) : '';
+
+        if ($lang === '' || $domain === '' || trim($original) === '') {
+            wp_send_json_error(array('message' => 'bad_input'), 400);
+        }
+
+        $dict = get_option('hmpcv2_woo_dict', array());
+        $dict = is_array($dict) ? $dict : array();
+
+        $key = self::hmpcv2_woo_dict_key($original, $context);
+
+        if (trim($translation) === '') {
+            if (isset($dict[$lang][$domain][$key])) {
+                unset($dict[$lang][$domain][$key]);
+                if (empty($dict[$lang][$domain])) unset($dict[$lang][$domain]);
+                if (empty($dict[$lang])) unset($dict[$lang]);
+                update_option('hmpcv2_woo_dict', $dict, false);
+            }
+            wp_send_json_success(array('saved' => true, 'deleted' => true));
+        }
+
+        if (!isset($dict[$lang]) || !is_array($dict[$lang])) $dict[$lang] = array();
+        if (!isset($dict[$lang][$domain]) || !is_array($dict[$lang][$domain])) $dict[$lang][$domain] = array();
+
+        $dict[$lang][$domain][$key] = $translation;
+
+        update_option('hmpcv2_woo_dict', $dict, false);
+        wp_send_json_success(array('saved' => true));
+    }
+
+    public static function ajax_woo_dict_delete() {
+        check_ajax_referer('hmpcv2_admin_nonce', 'nonce');
+        if (!current_user_can('manage_options')) wp_send_json_error(array('message' => 'forbidden'), 403);
+
+        $lang = isset($_POST['lang']) ? self::hmpcv2_sanitize_lang_code((string) $_POST['lang'], '') : '';
+        $domain = isset($_POST['domain']) ? sanitize_text_field((string) $_POST['domain']) : '';
+        $original = isset($_POST['original']) ? sanitize_text_field((string) $_POST['original']) : '';
+        $context = isset($_POST['context']) ? sanitize_text_field((string) $_POST['context']) : '';
+
+        if ($lang === '' || $domain === '' || trim($original) === '') {
+            wp_send_json_error(array('message' => 'bad_input'), 400);
+        }
+
+        $dict = get_option('hmpcv2_woo_dict', array());
+        $dict = is_array($dict) ? $dict : array();
+
+        $key = self::hmpcv2_woo_dict_key($original, $context);
+
+        if (isset($dict[$lang][$domain][$key])) {
+            unset($dict[$lang][$domain][$key]);
+            if (empty($dict[$lang][$domain])) unset($dict[$lang][$domain]);
+            if (empty($dict[$lang])) unset($dict[$lang]);
+            update_option('hmpcv2_woo_dict', $dict, false);
+        }
+
+        wp_send_json_success(array('deleted' => true));
     }
 
     public static function ajax_search_content() {
@@ -684,6 +858,9 @@ final class HMPCv2_Admin_Translations {
 
         $enabled = HMPCv2_Langs::enabled_langs();
         $default = HMPCv2_Langs::default_lang();
+        $opts = HMPCv2_Options::get_all();
+        $lang_labels = isset($opts['lang_labels']) && is_array($opts['lang_labels']) ? $opts['lang_labels'] : array();
+        $supported_langs = self::hmpcv2_supported_langs();
 
         $suggested = self::get_suggested_posts();
 
@@ -696,6 +873,7 @@ final class HMPCv2_Admin_Translations {
         echo '<a class="nav-tab nav-tab-active" data-tab="content">Content Search</a>';
         echo '<a class="nav-tab" data-tab="suggested">Suggested</a>';
         echo '<a class="nav-tab" data-tab="taxonomy">Taxonomy Search</a>';
+        echo '<a class="nav-tab" data-tab="woo-strings">Woo Strings</a>';
         echo '<a class="nav-tab" data-tab="complete">Complete Page</a>';
         echo '<a class="nav-tab" data-tab="style">Style</a>';
         echo '</h2>';
@@ -751,6 +929,39 @@ final class HMPCv2_Admin_Translations {
         echo '<button class="button" type="submit">Search</button>';
         echo '</form>';
         echo '<div id="hmpcv2-taxonomy-results"></div>';
+        echo '</div>';
+
+        // Woo Strings tab
+        echo '<div id="hmpcv2-tab-woo-strings" class="hmpcv2-tab">';
+        echo '<p>Manage WooCommerce string translations per language and domain.</p>';
+        echo '<div class="hmpcv2-card">';
+        echo '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">';
+        echo '<label>Language<br><select id="hmpcv2-woo-lang">';
+        foreach ($supported_langs as $code) {
+            $label = isset($lang_labels[$code]) ? $lang_labels[$code] : strtoupper($code);
+            echo '<option value="' . esc_attr($code) . '" ' . selected($code, 'en', false) . '>' . esc_html(strtoupper($code) . ' — ' . $label) . '</option>';
+        }
+        echo '</select></label>';
+        echo '<label>Domain<br><select id="hmpcv2-woo-domain">';
+        echo '<option value="woocommerce" selected>woocommerce</option>';
+        echo '<option value="woocommerce-admin">woocommerce-admin</option>';
+        echo '<option value="default">default</option>';
+        echo '</select></label>';
+        echo '<label>Search<br><input type="text" id="hmpcv2-woo-search" placeholder="Search strings" style="width:240px;" /></label>';
+        echo '</div>';
+        echo '<div id="hmpcv2-woo-results" class="hmpcv2-woo-results"></div>';
+        echo '</div>';
+
+        echo '<div class="hmpcv2-card">';
+        echo '<h3>Add / Update String</h3>';
+        echo '<div class="hmpcv2-woo-form">';
+        echo '<div class="field"><label for="hmpcv2-woo-add-original">Original</label><input type="text" id="hmpcv2-woo-add-original" /></div>';
+        echo '<div class="field"><label for="hmpcv2-woo-add-context">Context (optional)</label><input type="text" id="hmpcv2-woo-add-context" /></div>';
+        echo '<div class="field"><label for="hmpcv2-woo-add-translation">Translation</label><textarea id="hmpcv2-woo-add-translation"></textarea></div>';
+        echo '</div>';
+        echo '<p class="hmpcv2-small">Leave translation empty to delete the entry.</p>';
+        echo '<p><button class="button button-primary" type="button" id="hmpcv2-woo-save">Save</button></p>';
+        echo '</div>';
         echo '</div>';
 
         // Complete Page tab (Pages list)
