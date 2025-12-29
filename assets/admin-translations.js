@@ -86,6 +86,46 @@ jQuery(function ($) {
     return actions;
   }
 
+  function showNotice(message) {
+    const $wrap = $(".wrap").first();
+    if (!$wrap.length) {
+      alert(message);
+      return;
+    }
+    const $notice = $('<div class="notice notice-success is-dismissible"><p></p></div>');
+    $notice.find("p").text(message);
+    $wrap.prepend($notice);
+    setTimeout(function () {
+      $notice.fadeOut(200, function () {
+        $notice.remove();
+      });
+    }, 2000);
+  }
+
+  function ensureWooModal() {
+    if ($("#hmpcv2-woo-title-modal").length) return;
+    const modal =
+      '<div class="hmpcv2-modal-overlay" id="hmpcv2-woo-title-modal">' +
+        '<div class="hmpcv2-modal" role="dialog" aria-modal="true" aria-labelledby="hmpcv2-woo-title-modal-title">' +
+          '<h2 id="hmpcv2-woo-title-modal-title">Edit Title</h2>' +
+          '<label for="hmpcv2-woo-title-input">Title</label>' +
+          '<input type="text" id="hmpcv2-woo-title-input" class="hmpcv2-woo-title-input" />' +
+          '<div class="hmpcv2-modal-actions">' +
+            '<button type="button" class="button button-primary hmpcv2-woo-title-save">Save</button>' +
+            '<button type="button" class="button hmpcv2-woo-title-cancel">Cancel</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    $("body").append(modal);
+  }
+
+  function closeWooModal() {
+    const $modal = $("#hmpcv2-woo-title-modal");
+    $modal.hide();
+    $modal.removeData("pageId").removeData("lang");
+    $modal.find(".hmpcv2-woo-title-input").val("");
+  }
+
   function buildRow(item) {
     const map = item.group && item.group.map ? item.group.map : {};
     const pills = (data.enabled_langs || [])
@@ -236,6 +276,91 @@ jQuery(function ($) {
       })
       .always(function () {
         $btn.prop("disabled", false).text("Create " + lang.toUpperCase());
+      });
+  });
+
+  $(document).on("click", '[data-action="hmpcv2-woo-title-edit"]', function () {
+    const $btn = $(this);
+    const $card = $btn.closest(".hmpcv2-card");
+    const pageId = parseInt($card.data("post"), 10) || 0;
+    const lang = ($btn.data("lang") || "").toString();
+    if (!pageId || !lang) return;
+
+    ensureWooModal();
+    const $modal = $("#hmpcv2-woo-title-modal");
+    const $input = $modal.find(".hmpcv2-woo-title-input");
+    const label = lang.toUpperCase();
+
+    $modal.data("pageId", pageId).data("lang", lang);
+    $modal.find("#hmpcv2-woo-title-modal-title").text("Edit " + label + " Title");
+    $input.prop("disabled", true).val("Loading…");
+    $modal.css("display", "flex");
+
+    $.post(data.ajax_url, {
+      action: "hmpcv2_get_woo_page_title",
+      nonce: data.nonce,
+      page_id: pageId,
+      lang: lang
+    })
+      .done(function (res) {
+        if (res && res.success && res.data) {
+          $input.val(res.data.title || "");
+        } else {
+          $input.val("");
+          alert("Unable to load title");
+        }
+      })
+      .fail(function () {
+        $input.val("");
+        alert("Unable to load title");
+      })
+      .always(function () {
+        $input.prop("disabled", false);
+        $input.focus();
+      });
+  });
+
+  $(document).on("click", ".hmpcv2-woo-title-cancel", function () {
+    closeWooModal();
+  });
+
+  $(document).on("click", ".hmpcv2-modal-overlay", function (event) {
+    if (event.target === this) {
+      closeWooModal();
+    }
+  });
+
+  $(document).on("click", ".hmpcv2-woo-title-save", function () {
+    const $modal = $("#hmpcv2-woo-title-modal");
+    const pageId = parseInt($modal.data("pageId"), 10) || 0;
+    const lang = ($modal.data("lang") || "").toString();
+    const $input = $modal.find(".hmpcv2-woo-title-input");
+    const title = $input.val();
+    if (!pageId || !lang) return;
+
+    const $btn = $(this);
+    $btn.prop("disabled", true).text("Saving…");
+
+    $.post(data.ajax_url, {
+      action: "hmpcv2_save_woo_page_title",
+      nonce: data.nonce,
+      page_id: pageId,
+      lang: lang,
+      title: title
+    })
+      .done(function (res) {
+        if (res && res.success) {
+          showNotice("Saved");
+          closeWooModal();
+        } else {
+          alert("Save failed");
+        }
+      })
+      .fail(function () {
+        alert("Save failed");
+      })
+      .always(function () {
+        $btn.prop("disabled", false).text("Save");
       });
   });
 

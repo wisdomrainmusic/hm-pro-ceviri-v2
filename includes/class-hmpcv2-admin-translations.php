@@ -112,6 +112,11 @@ final class HMPCv2_Admin_Translations {
             .hmpcv2-term-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-top:8px}
             .hmpcv2-term-grid .field{display:flex;flex-direction:column}
             .hmpcv2-term-grid label{font-weight:600;margin-bottom:4px}
+            .hmpcv2-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:100000}
+            .hmpcv2-modal{background:#fff;border-radius:6px;padding:16px;min-width:320px;max-width:520px;box-shadow:0 10px 30px rgba(0,0,0,.2)}
+            .hmpcv2-modal h2{margin-top:0}
+            .hmpcv2-modal input[type="text"]{width:100%;margin:8px 0 12px}
+            .hmpcv2-modal-actions{display:flex;gap:8px;justify-content:flex-end}
         ');
     }
 
@@ -722,7 +727,7 @@ final class HMPCv2_Admin_Translations {
                 echo '</div>';
                 echo '<div class="hmpcv2-langs" data-map="' . esc_attr(wp_json_encode(isset($group['map']) ? $group['map'] : array())) . '">';
                 echo self::render_lang_status($group ? $group['map'] : array(), $enabled);
-                echo self::render_lang_actions($item['id'], $group, $enabled, $default);
+                echo self::render_lang_actions($item['id'], $group, $enabled, $default, $suggested_type);
                 echo '</div>';
                 echo '</div>';
                 echo '</div>';
@@ -918,12 +923,19 @@ final class HMPCv2_Admin_Translations {
         return '<div>' . $pills . '</div>';
     }
 
-    private static function render_lang_actions($source_id, $group, $enabled, $default) {
+    private static function render_lang_actions($source_id, $group, $enabled, $default, $suggested_type = '') {
         $map = isset($group['map']) ? $group['map'] : array();
         $group_id = isset($group['group']) ? $group['group'] : '';
         $base_id = !empty($map[$default]) ? (int)$map[$default] : (int)$source_id;
 
         $out = '<div class="hmpcv2-actions" data-source="' . esc_attr($base_id) . '" data-group="' . esc_attr($group_id) . '" data-map="' . esc_attr(wp_json_encode($map)) . '">';
+
+        if ($suggested_type === 'woo_core') {
+            $out .= '<button type="button" class="button button-small" data-action="hmpcv2-woo-title-edit" data-lang="tr">Edit TR</button> ';
+            $out .= '<button type="button" class="button button-small" data-action="hmpcv2-woo-title-edit" data-lang="en">Edit EN</button> ';
+            $out .= '</div>';
+            return $out;
+        }
 
         if ($group_id === '') {
             $out .= '<button type="button" class="button button-small hmpcv2-create-group" data-source="' . esc_attr($source_id) . '">Create group (base ' . esc_html(strtoupper($default)) . ')</button>';
