@@ -163,6 +163,14 @@ class HMPCv2_Router {
         // internal state still stays on default language (which breaks menu labels/URLs).
         add_action('init', array(__CLASS__, 'sync_current_language_from_request'), 0);
 
+        /**
+         * Link generation: keep current language prefix on permalinks.
+         * Fixes Woo product navigation falling back to TR while browsing /en or /de.
+         */
+        add_filter('post_type_link', array(__CLASS__, 'filter_post_type_link_to_current_lang'), 20, 2);
+        add_filter('post_link', array(__CLASS__, 'filter_post_link_to_current_lang'), 20, 3);
+        add_filter('term_link', array(__CLASS__, 'filter_term_link_to_current_lang'), 20, 3);
+
         // IMPORTANT: Router behavior must be FRONTEND-only
         if (is_admin()) {
             return;
@@ -199,6 +207,132 @@ class HMPCv2_Router {
         $lang = self::current_lang();
         $lang = HMPCv2_Langs::sanitize_lang_code($lang, HMPCv2_Langs::default_lang());
         HMPCv2_Langs::set_current_language($lang);
+    }
+
+    /**
+     * Only touch frontend links, and only for internal URLs.
+     */
+    private static function is_internal_url($url) {
+        if (!is_string($url) || $url === '') return false;
+        $home = wp_parse_url(home_url('/'));
+        $u    = wp_parse_url($url);
+        if (empty($u) || empty($home)) return false;
+
+        // Relative URLs are internal by definition.
+        if (empty($u['host'])) return true;
+
+        $home_host = isset($home['host']) ? strtolower($home['host']) : '';
+        $url_host  = isset($u['host']) ? strtolower($u['host']) : '';
+        return ($home_host !== '' && $url_host === $home_host);
+    }
+
+    /**
+     * Remove an existing language prefix from a path (/en/..., /de/..., etc.)
+     */
+    private static function strip_lang_prefix_from_path($path) {
+        $path = is_string($path) ? $path : '/';
+        $path = '/' . ltrim($path, '/');
+
+        $trim = trim($path, '/');
+        if ($trim === '') return '/';
+
+        $segments = explode('/', $trim);
+        $enabled  = HMPCv2_Langs::enabled_langs();
+        $maybe    = strtolower((string) $segments[0]);
+
+        if (HMPCv2_Langs::is_allowed($maybe) && in_array($maybe, $enabled, true)) {
+            array_shift($segments);
+        }
+
+        $base = '/' . implode('/', $segments);
+        $base = preg_replace('#/+#', '/', $base);
+        return $base === '' ? '/' : $base;
+    }
+
+    /**
+     * Apply the current language prefix to an internal URL.
+     */
+    public static function apply_current_lang_to_url($url) {
+        if (is_admin() || wp_doing_ajax()) return $url;
+        if (!self::is_internal_url($url)) return $url;
+
+        $current = HMPCv2_Langs::get_current_language();
+        $default = HMPCv2_Langs::default_lang();
+        $enabled = HMPCv2_Langs::enabled_langs();
+
+        $current = HMPCv2_Langs::sanitize_lang_code($current, $default);
+        if (!in_array($current, $enabled, true)) $current = $default;
+
+        $parts = wp_parse_url($url);
+        if (empty($parts)) return $url;
+
+        $path     = isset($parts['path']) ? (string) $parts['path'] : '/';
+        $query    = isset($parts['query']) ? ('?' . $parts['query']) : '';
+        $fragment = isset($parts['fragment']) ? ('#' . $parts['fragment']) : '';
+
+        // Strip any existing lang prefix first.
+        $base_path = self::strip_lang_prefix_from_path($path);
+        $is_root   = ($base_path === '/' || $base_path === '');
+
+        $prefix_default = self::prefix_default_lang();
+
+        // Build new path.
+        if ($current === $default && !$prefix_default) {
+            $new_path = $is_root ? '/' : $base_path;
+        } else {
+            $new_path = $is_root
+                ? '/' . $current . '/'
+                : '/' . $current . '/' . ltrim($base_path, '/');
+        }
+
+        $new_path = preg_replace('#/+#', '/', $new_path);
+
+        // Respect original trailing slash behavior as much as possible.
+        // If original path ended with '/', keep it. Otherwise keep as-is.
+        if (substr($path, -1) === '/' && substr($new_path, -1) !== '/') {
+            $new_path .= '/';
+        }
+
+        // Rebuild absolute internal URL.
+        $final = home_url($new_path) . $query . $fragment;
+        return $final;
+    }
+
+    /**
+     * Filter: post type permalinks (Woo products primarily).
+     */
+    public static function filter_post_type_link_to_current_lang($post_link, $post) {
+        if (empty($post_link) || !is_object($post)) return $post_link;
+
+        // Primary target: Woo products. (Safe to extend later.)
+        if (isset($post->post_type) && $post->post_type === 'product') {
+            return self::apply_current_lang_to_url($post_link);
+        }
+
+        return $post_link;
+    }
+
+    /**
+     * Filter: standard post links (optional safety; won’t touch non-internal URLs).
+     */
+    public static function filter_post_link_to_current_lang($permalink, $post, $leavename) {
+        if (empty($permalink)) return $permalink;
+        // Keep behavior focused; if you want all posts/pages prefixed, expand here.
+        return $permalink;
+    }
+
+    /**
+     * Filter: taxonomy term links (product categories/tags, etc.)
+     */
+    public static function filter_term_link_to_current_lang($termlink, $term, $taxonomy) {
+        if (empty($termlink)) return $termlink;
+
+        // Product taxonomies are the key ones for Woo navigation.
+        if ($taxonomy === 'product_cat' || $taxonomy === 'product_tag') {
+            return self::apply_current_lang_to_url($termlink);
+        }
+
+        return $termlink;
     }
 
     public static function add_query_vars($vars) {
