@@ -1453,10 +1453,21 @@ final class HMPCv2_Admin_Translations {
         $source = get_post($source_id);
         if (!$source) return 0;
 
+        $source_slug = $source->post_name ? (string) $source->post_name : sanitize_title($source->post_title);
+        $desired_slug = $target_lang . '-' . $source_slug;
+        $unique_slug = wp_unique_post_slug(
+            $desired_slug,
+            0,
+            $source->post_status ? (string) $source->post_status : 'draft',
+            (string) $source->post_type,
+            (int) $source->post_parent
+        );
+
         $new_id = wp_insert_post(array(
             'post_type'      => $source->post_type,
             'post_status'    => $source->post_status ? (string) $source->post_status : 'draft',
             'post_title'     => $source->post_title . ' [' . strtoupper($target_lang) . ']',
+            'post_name'      => $unique_slug,
             'post_content'   => (string) $source->post_content,
             'post_excerpt'   => (string) $source->post_excerpt,
             'post_author'    => (int) $source->post_author,
