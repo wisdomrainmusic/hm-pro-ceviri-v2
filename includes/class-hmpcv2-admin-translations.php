@@ -24,10 +24,10 @@ class HMPCv2_Woo_Presets {
                         'Remove this item',
                         'Your cart is currently empty.',
                         'Return to shop',
-                        // TR leftovers seen on Cart totals box (static only)
-                        'Gönderim',
-                        'Ücretsiz gönderim',
-                        'Adresi değiştirin',
+                        // TR leftovers (prefill EN)
+                        'Gönderim' => 'Shipping',
+                        'Ücretsiz gönderim' => 'Free shipping',
+                        'Adresi değiştirin' => 'Change address',
                     ),
                 ),
             ),
@@ -46,40 +46,40 @@ class HMPCv2_Woo_Presets {
                         'Shipping',
                         'Total',
                         'Privacy policy',
-                        // Checkout title / coupon bar
-                        'Ödeme Sayfası',
-                        'Kuponunuz var mı? Kupon kodunuzu girmek için buraya tıklayın',
+                        // TR leftovers (prefill EN)
+                        'Ödeme Sayfası' => 'Checkout',
+                        'Kuponunuz var mı? Kupon kodunuzu girmek için buraya tıklayın' => 'Have a coupon? Click here to enter your code',
                         // Section headers / order box
-                        'Fatura detayları',
-                        'Siparişiniz',
-                        'Ürün',
-                        'Ara Toplam',
-                        'Gönderim',
-                        'Toplam',
+                        'Fatura detayları' => 'Billing details',
+                        'Siparişiniz' => 'Your order',
+                        'Ürün' => 'Product',
+                        'Ara Toplam' => 'Subtotal',
+                        'Gönderim' => 'Shipping',
+                        'Toplam' => 'Total',
                         // Payment method + instructions (BACS)
-                        'Banka havalesi/EFT',
-                        'Ödemenizi doğrudan banka hesabımıza yapınız. Lütfen ilgili Sipariş Numarasını ödemenizin açıklama kısmına yazınız. Ödemeniz onaylanmadıkça siparişiniz gönderilmeyecektir.',
+                        'Banka havalesi/EFT' => 'Direct bank transfer',
+                        'Ödemenizi doğrudan banka hesabımıza yapınız. Lütfen ilgili Sipariş Numarasını ödemenizin açıklama kısmına yazınız. Ödemeniz onaylanmadıkça siparişiniz gönderilmeyecektir.' => 'Make your payment directly into our bank account. Please use your Order ID as the payment reference. Your order will not be shipped until the funds have cleared in our account.',
                         // Privacy text
-                        'Kişisel verileriniz siparişinizi işleme almak, bu web sitesindeki deneyimlerinizi desteklemek ve gizlilik ilkesi sayfamızda açıklanan diğer amaçlar için kullanılacaktır.',
+                        'Kişisel verileriniz siparişinizi işleme almak, bu web sitesindeki deneyimlerinizi desteklemek ve gizlilik ilkesi sayfamızda açıklanan diğer amaçlar için kullanılacaktır.' => 'Your personal data will be used to process your order, support your experience throughout this website, and for other purposes described in our privacy policy.',
                         // Button
-                        'Siparişi onayla',
+                        'Siparişi onayla' => 'Place order',
                         // Billing fields (labels + placeholders; avoid city-specific values)
-                        'Firma adı (isteğe bağlı)',
-                        'Ülke',
-                        'Türkiye',
-                        'Sokak adresi',
-                        'Bina numarası ve sokak adı',
-                        'Apartman, daire, oda vb. (isteğe bağlı)',
-                        'Posta kodu',
-                        'İlçe / Semt',
-                        'Şehir',
-                        'Telefon',
-                        'E-posta adresi',
+                        'Firma adı (isteğe bağlı)' => 'Company name (optional)',
+                        'Ülke' => 'Country / Region',
+                        'Türkiye' => 'Turkey',
+                        'Sokak adresi' => 'Street address',
+                        'Bina numarası ve sokak adı' => 'House number and street name',
+                        'Apartman, daire, oda vb. (isteğe bağlı)' => 'Apartment, suite, unit, etc. (optional)',
+                        'Posta kodu' => 'Postcode / ZIP',
+                        'İlçe / Semt' => 'Town / City',
+                        'Şehir' => 'City',
+                        'Telefon' => 'Phone',
+                        'E-posta adresi' => 'Email address',
                         // Ship to different address
-                        'Farklı bir adrese gönderilsin mi?',
+                        'Farklı bir adrese gönderilsin mi?' => 'Ship to a different address?',
                         // Notes
-                        'Siparişinizle ilgili notlar (isteğe bağlı)',
-                        'Siparişiniz ile ilgili notlar. örn. teslimat için özel notlar.',
+                        'Siparişinizle ilgili notlar (isteğe bağlı)' => 'Order notes (optional)',
+                        'Siparişiniz ile ilgili notlar. örn. teslimat için özel notlar.' => 'Notes about your order, e.g. special notes for delivery.',
                     ),
                 ),
             ),
@@ -98,30 +98,30 @@ class HMPCv2_Woo_Presets {
                         'From your account dashboard you can view your recent orders, manage your shipping and billing addresses, and edit your password and account details.',
                         'No order has been made yet.',
                         'Browse products',
-                        // Dashboard hello + description seen as TR while browsing EN
-                        'Merhaba %1$s (%2$s değil misiniz? Çıkış yapın)',
-                        'Hesap panonuzdan son siparişlerinizi görüntüleyebilir, gönderim ve fatura adreslerinizi yönetebilir ve şifreniz ile hesap ayrıntılarınızı düzenleyebilirsiniz.',
+                        // TR leftovers (prefill EN)
+                        'Merhaba %1$s (%2$s değil misiniz? Çıkış yapın)' => 'Hello %1$s (not %2$s? Log out)',
+                        'Hesap panonuzdan son siparişlerinizi görüntüleyebilir, gönderim ve fatura adreslerinizi yönetebilir ve şifreniz ile hesap ayrıntılarınızı düzenleyebilirsiniz.' => 'From your account dashboard you can view your recent orders, manage your shipping and billing addresses, and edit your password and account details.',
                         // Downloads
-                        'Henüz indirilecek bir ürün yok.',
+                        'Henüz indirilecek bir ürün yok.' => 'No downloads available yet.',
                         // Addresses
-                        'Belirttiğiniz adresler ödeme sayfasında varsayılan olarak kullanılacaktır.',
-                        'Fatura adresi',
-                        'Gönderim adresi',
-                        'Fatura adresi ekle',
-                        'Gönderim adresi ekle',
-                        'Henüz bu tür bir adres bilgisi düzenlenmemiş.',
+                        'Belirttiğiniz adresler ödeme sayfasında varsayılan olarak kullanılacaktır.' => 'The following addresses will be used on the checkout page by default.',
+                        'Fatura adresi' => 'Billing address',
+                        'Gönderim adresi' => 'Shipping address',
+                        'Fatura adresi ekle' => 'Add billing address',
+                        'Gönderim adresi ekle' => 'Add shipping address',
+                        'Henüz bu tür bir adres bilgisi düzenlenmemiş.' => 'You have not set up this type of address yet.',
                         // Account details fields / password section
-                        'Ad',
-                        'Soyad',
-                        'Görünen ad',
-                        'Adınız hesap bölümünde ve değerlendirmelerde bu şekilde görüntülenir',
-                        'E-posta adresi',
-                        'Parola değiştirme',
-                        'Mevcut parola (değişmeden bırakmak için boş bırakın)',
-                        'Yeni parola (değişmeden bırakmak için boş bırakın)',
-                        'Yeni parolayı onayla',
-                        'DEĞİŞİKLİKLERİ KAYDET',
-                        'Oturumu kapat',
+                        'Ad' => 'First name',
+                        'Soyad' => 'Last name',
+                        'Görünen ad' => 'Display name',
+                        'Adınız hesap bölümünde ve değerlendirmelerde bu şekilde görüntülenir' => 'This will be how your name will be displayed in the account section and in reviews.',
+                        'E-posta adresi' => 'Email address',
+                        'Parola değiştirme' => 'Password change',
+                        'Mevcut parola (değişmeden bırakmak için boş bırakın)' => 'Current password (leave blank to leave unchanged)',
+                        'Yeni parola (değişmeden bırakmak için boş bırakın)' => 'New password (leave blank to leave unchanged)',
+                        'Yeni parolayı onayla' => 'Confirm new password',
+                        'DEĞİŞİKLİKLERİ KAYDET' => 'Save changes',
+                        'Oturumu kapat' => 'Log out',
                     ),
                 ),
             ),
@@ -568,12 +568,25 @@ final class HMPCv2_Admin_Translations {
                 $dict[$lang][$domain] = array();
             }
 
-            foreach ($strings as $original) {
-                $original = sanitize_text_field((string) $original);
+            foreach ($strings as $k => $v) {
+                // Support both:
+                // 1) numeric arrays: [ 'Cart', 'Total', ... ]  => translation defaults to original
+                // 2) associative arrays: [ 'Gönderim' => 'Shipping', ... ]
+                $is_map = !is_int($k);
+
+                $original = $is_map ? (string) $k : (string) $v;
+                $translation = $is_map ? (string) $v : (string) $v;
+
+                $original = sanitize_text_field($original);
+                $translation = sanitize_text_field($translation);
+
                 if ($original === '') continue;
+
                 $key = self::hmpcv2_woo_dict_key($original, '');
+
+                // Seed only if missing (do not overwrite admin edits)
                 if (!isset($dict[$lang][$domain][$key])) {
-                    $dict[$lang][$domain][$key] = $original;
+                    $dict[$lang][$domain][$key] = ($translation !== '' ? $translation : $original);
                     $added++;
                 }
             }
