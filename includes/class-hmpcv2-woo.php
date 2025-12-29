@@ -387,6 +387,9 @@ final class HMPCv2_Woo {
 	}
 
 	public static function woo_gettext_override($translation, $text, $domain) {
+		if ($domain === 'woocommerce') {
+			error_log('[HMPCv2][woo_gettext] qid=' . (int)get_queried_object_id() . ' lang=' . self::current_lang_code() . ' text=' . $text . ' translation=' . $translation);
+		}
 		if ($domain !== 'woocommerce') return $translation;
 		if (!self::is_on_woo_core_page()) return $translation;
 
