@@ -73,12 +73,14 @@ final class HMPCv2_Admin_Translations {
         if ($is_translations_screen) {
             $opts = HMPCv2_Options::get_all();
             $lang_labels = isset($opts['lang_labels']) && is_array($opts['lang_labels']) ? $opts['lang_labels'] : array();
+            $js_path = HMPCV2_PATH . 'assets/admin-translations.js';
+            $js_ver  = file_exists($js_path) ? filemtime($js_path) : HMPCV2_VERSION;
 
             wp_register_script(
                 'hmpcv2-admin-translations',
                 HMPCV2_URL . 'assets/admin-translations.js',
                 array('jquery', 'jquery-ui-autocomplete'),
-                HMPCV2_VERSION,
+                $js_ver,
                 true
             );
 
@@ -91,6 +93,11 @@ final class HMPCv2_Admin_Translations {
             ));
 
             wp_enqueue_script('hmpcv2-admin-translations');
+            wp_add_inline_script(
+                'hmpcv2-admin-translations',
+                'console.log("[HMPCv2] admin-translations.js loaded", window.HMPCv2Translations);',
+                'before'
+            );
         }
 
         wp_register_style('hmpcv2-admin-inline', false, array(), HMPCV2_VERSION);
