@@ -12,6 +12,7 @@ final class HMPCv2_Woo {
 		
 		// Frontend overrides
 		add_filter('the_title', array(__CLASS__, 'filter_product_title'), 20, 2);
+		add_filter('the_title', array(__CLASS__, 'filter_woo_core_page_title'), 21, 2);
 		add_filter('the_content', array(__CLASS__, 'filter_product_content'), 20);
 		add_filter('woocommerce_short_description', array(__CLASS__, 'filter_product_short_description'), 20);
 		add_action('wp_footer', array(__CLASS__, 'debug_footer_comment'), 9999);
@@ -24,6 +25,25 @@ final class HMPCv2_Woo {
 	// ---------- Meta keys ----------
 	private static function k($lang, $field) {
 		return '_hmpcv2_' . strtolower($lang) . '_' . $field;
+	}
+
+	private static function woo_core_page_ids(): array {
+		$page_ids = array(
+			(int) get_option('woocommerce_shop_page_id'),
+			(int) get_option('woocommerce_cart_page_id'),
+			(int) get_option('woocommerce_checkout_page_id'),
+			(int) get_option('woocommerce_myaccount_page_id'),
+		);
+
+		$page_ids = array_values(array_unique(array_filter($page_ids, function($page_id) {
+			return (int) $page_id > 0;
+		})));
+
+		return $page_ids;
+	}
+
+	private static function is_woo_core_page_id(int $page_id): bool {
+		return in_array($page_id, self::woo_core_page_ids(), true);
 	}
 
 	// ---------- Admin ----------
@@ -184,6 +204,30 @@ final class HMPCv2_Woo {
 
 		$tr = (string) get_post_meta($post_id, self::k($lang, 'title'), true);
 		return $tr !== '' ? $tr : $title;
+	}
+
+	public static function filter_woo_core_page_title($title, $post_id) {
+		if (is_admin()) return $title;
+
+		$qid = (int) get_queried_object_id();
+		if ($qid <= 0 || (int) $post_id !== $qid) return $title;
+
+		$post = get_post($qid);
+		if (!$post || (string) $post->post_type !== 'page') return $title;
+
+		if (!self::is_woo_core_page_id($qid)) return $title;
+
+		$lang = self::current_lang_non_default();
+		if ($lang === '') return $title;
+
+		$tr = (string) get_post_meta($qid, self::k($lang, 'title'), true);
+		if ($tr !== '') return $tr;
+
+		$fallback_key = '_hmpcv2_title_' . strtolower($lang);
+		$tr2 = (string) get_post_meta($qid, $fallback_key, true);
+		if ($tr2 !== '') return $tr2;
+
+		return $title;
 	}
 
 	public static function filter_product_content($content) {
