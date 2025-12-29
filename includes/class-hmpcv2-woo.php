@@ -26,6 +26,9 @@ final class HMPCv2_Woo {
 		// Woo core gettext overrides
 		add_filter('gettext', array(__CLASS__, 'woo_gettext_override'), 10, 3);
 		add_filter('gettext_with_context', array(__CLASS__, 'woo_gettext_with_context_override'), 10, 4);
+
+		// My Account menu item labels (Addresses etc.)
+		add_filter('woocommerce_account_menu_items', array(__CLASS__, 'filter_myaccount_menu_items'), 20, 1);
 	}
 
 	// ---------- Meta keys ----------
@@ -272,6 +275,19 @@ final class HMPCv2_Woo {
 		$tr2 = (string) get_post_meta($qid, $fallback_key, true);
 		if ($tr2 !== '') return $tr2;
 
+		// EN fallback for core Woo pages when the WP page title is Turkish
+		if ($lang === 'en') {
+			$shop_id     = (int) get_option('woocommerce_shop_page_id');
+			$cart_id     = (int) get_option('woocommerce_cart_page_id');
+			$checkout_id = (int) get_option('woocommerce_checkout_page_id');
+			$account_id  = (int) get_option('woocommerce_myaccount_page_id');
+
+			if ($qid === $shop_id) return 'Shop';
+			if ($qid === $cart_id) return 'Cart';
+			if ($qid === $checkout_id) return 'Checkout';
+			if ($qid === $account_id) return 'My account';
+		}
+
 		return $title;
 	}
 
@@ -392,6 +408,49 @@ final class HMPCv2_Woo {
 		return $attributes;
 	}
 
+	public static function filter_myaccount_menu_items($items) {
+		if (is_admin()) return $items;
+
+		$lang = self::current_lang_code();
+		if ($lang === '') return $items;
+
+		// Woo endpoint -> EN base labels (source of truth)
+		$base = array(
+			'dashboard' => 'Dashboard',
+			'orders' => 'Orders',
+			'downloads' => 'Downloads',
+			'edit-address' => 'Addresses',
+			'edit-account' => 'Account details',
+			'customer-logout' => 'Log out',
+		);
+
+		foreach ($items as $endpoint => $label) {
+			if (!isset($base[$endpoint])) continue;
+
+			$en_label = $base[$endpoint];
+
+			// Try preset first (domain: woocommerce, key: s:<EN label>)
+			$dict = self::woo_dict();
+			$domain = 'woocommerce';
+			$key = self::dict_key_simple($en_label);
+
+			if (isset($dict[$lang][$domain][$key])) {
+				$t = (string) $dict[$lang][$domain][$key];
+				if ($t !== '') {
+					$items[$endpoint] = $t;
+					continue;
+				}
+			}
+
+			// Fallback: if EN -> show EN base label instead of Turkish
+			if ($lang === 'en') {
+				$items[$endpoint] = $en_label;
+			}
+		}
+
+		return $items;
+	}
+
 	public static function woo_gettext_override($translation, $text, $domain) {
 		$lang = self::current_lang_code();
 		if (defined('HMPC_DEBUG') && HMPC_DEBUG) {
@@ -401,20 +460,17 @@ final class HMPCv2_Woo {
 		if ($lang === '') return $translation;
 		if (is_admin()) return $translation;
 
-		// EN master fallback:
-		// WooCommerce TR language pack may translate $translation into Turkish even under /en/.
-		// If EN preset is missing a key, fall back to original source string ($text).
-		if ($lang === 'en' && $domain === 'woocommerce') {
-			return $text;
-		}
-
 		$dict = self::woo_dict();
-		if (!isset($dict[$lang]) || !isset($dict[$lang][$domain])) return $translation;
 		$key = self::dict_key_simple((string) $text);
 
-		if (isset($dict[$lang]) && isset($dict[$lang][$domain]) && isset($dict[$lang][$domain][$key])) {
+		if (isset($dict[$lang][$domain][$key])) {
 			$t = (string) $dict[$lang][$domain][$key];
 			if ($t !== '') return $t;
+		}
+
+		// EN master fallback for Woo domains (prevents Turkish leaks)
+		if ($lang === 'en' && in_array($domain, array('woocommerce', 'woocommerce-blocks'), true)) {
+			return $text;
 		}
 
 		return $translation;
@@ -428,18 +484,17 @@ final class HMPCv2_Woo {
 		if ($lang === '') return $translation;
 		if (is_admin()) return $translation;
 
-		// EN master fallback for contextual gettext too.
-		if ($lang === 'en' && $domain === 'woocommerce') {
-			return $text;
-		}
-
 		$dict = self::woo_dict();
-		if (!isset($dict[$lang]) || !isset($dict[$lang][$domain])) return $translation;
 		$key = self::dict_key_context((string) $context, (string) $text);
 
-		if (isset($dict[$lang]) && isset($dict[$lang][$domain]) && isset($dict[$lang][$domain][$key])) {
+		if (isset($dict[$lang][$domain][$key])) {
 			$t = (string) $dict[$lang][$domain][$key];
 			if ($t !== '') return $t;
+		}
+
+		// EN master fallback for contextual gettext too.
+		if ($lang === 'en' && in_array($domain, array('woocommerce', 'woocommerce-blocks'), true)) {
+			return $text;
 		}
 
 		return $translation;
