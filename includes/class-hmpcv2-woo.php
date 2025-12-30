@@ -40,10 +40,13 @@ final class HMPCv2_Woo {
 		add_filter('woocommerce_get_privacy_policy_text', array(__CLASS__, 'filter_privacy_policy_text'), 20, 1);
 		add_filter('woocommerce_checkout_privacy_policy_text', array(__CLASS__, 'filter_privacy_policy_text'), 20, 1);
 
-		// Checkout: field labels and coupon notice (DB-based)
-		add_filter('woocommerce_checkout_fields', array(__CLASS__, 'filter_checkout_fields'), 20, 1);
-		add_filter('woocommerce_checkout_coupon_message', array(__CLASS__, 'filter_checkout_coupon_message'), 20, 1);
-	}
+                // Checkout: field labels and coupon notice (DB-based)
+                add_filter('woocommerce_checkout_fields', array(__CLASS__, 'filter_checkout_fields'), 20, 1);
+                add_filter('woocommerce_checkout_coupon_message', array(__CLASS__, 'filter_checkout_coupon_message'), 20, 1);
+
+                // Cart: shipping method label (e.g., Free shipping) (DB-based)
+                add_filter('woocommerce_package_rates', array(__CLASS__, 'filter_package_rates'), 20, 2);
+        }
 
 	public static function filter_available_payment_gateways($gateways) {
 		if (is_admin()) return $gateways;
@@ -117,15 +120,59 @@ final class HMPCv2_Woo {
 		return $fields;
 	}
 
-	public static function filter_checkout_coupon_message($message) {
-		if (is_admin()) return $message;
+        public static function filter_checkout_coupon_message($message) {
+                if (is_admin()) return $message;
 
-		$lang = self::current_lang_code();
-		if ($lang === '') return $message;
+                $lang = self::current_lang_code();
+                if ($lang === '') return $message;
 
-		$text = self::checkout_fields_get($lang, 'coupon_notice_text');
-		return $text !== '' ? $text : $message;
-	}
+                $text = self::checkout_fields_get($lang, 'coupon_notice_text');
+                return $text !== '' ? $text : $message;
+        }
+
+        public static function filter_package_rates($rates, $package) {
+                if (is_admin()) return $rates;
+
+                $lang = self::current_lang_code();
+                if ($lang === '') return $rates;
+
+                $label = self::cart_shipping_get($lang, 'free_shipping_label');
+                if ($label === '') $label = self::cart_shipping_get('en', 'free_shipping_label');
+                if ($label === '') return $rates;
+
+                foreach ($rates as $rate_id => $rate) {
+                        if (!is_object($rate)) continue;
+
+                        $method_id = '';
+                        if (method_exists($rate, 'get_method_id')) {
+                                $method_id = (string) $rate->get_method_id();
+                        } elseif (isset($rate->method_id)) {
+                                $method_id = (string) $rate->method_id;
+                        }
+
+                        $current_label = '';
+                        if (method_exists($rate, 'get_label')) {
+                                $current_label = (string) $rate->get_label();
+                        } elseif (isset($rate->label)) {
+                                $current_label = (string) $rate->label;
+                        }
+
+                        $norm = trim(mb_strtolower($current_label));
+
+                        $is_free = ($method_id === 'free_shipping') || ($norm === 'ücretsiz gönderim') || ($norm === 'free shipping');
+                        if (!$is_free) continue;
+
+                        if (method_exists($rate, 'set_label')) {
+                                $rate->set_label($label);
+                        } else {
+                                $rate->label = $label;
+                        }
+
+                        $rates[$rate_id] = $rate;
+                }
+
+                return $rates;
+        }
 
 	// ---------- Meta keys ----------
 	private static function k($lang, $field) {
@@ -196,23 +243,31 @@ final class HMPCv2_Woo {
 		return '';
 	}
 
-	private static function checkout_fields_get($lang, $key): string {
-		$dict = self::woo_dict();
-		$domain = 'checkout_fields';
-		$entry_key = self::dict_key_simple((string) $key);
+        private static function checkout_fields_get($lang, $key): string {
+                return self::woo_domain_get($lang, 'checkout_fields', (string) $key);
+        }
 
-		if (isset($dict[$lang][$domain][$entry_key])) {
-			$v = (string) $dict[$lang][$domain][$entry_key];
-			if ($v !== '') return $v;
-		}
+        private static function cart_shipping_get($lang, $key): string {
+                return self::woo_domain_get($lang, 'cart_shipping', (string) $key);
+        }
 
-		if ($lang !== 'en' && isset($dict['en'][$domain][$entry_key])) {
-			$v = (string) $dict['en'][$domain][$entry_key];
-			if ($v !== '') return $v;
-		}
+        private static function woo_domain_get($lang, $domain, $key): string {
+                $dict = self::woo_dict();
+                $domain = (string) $domain;
+                $entry_key = self::dict_key_simple((string) $key);
 
-		return '';
-	}
+                if (isset($dict[$lang][$domain][$entry_key])) {
+                        $v = (string) $dict[$lang][$domain][$entry_key];
+                        if ($v !== '') return $v;
+                }
+
+                if ($lang !== 'en' && isset($dict['en'][$domain][$entry_key])) {
+                        $v = (string) $dict['en'][$domain][$entry_key];
+                        if ($v !== '') return $v;
+                }
+
+                return '';
+        }
 
 	private static function dict_key_simple(string $text): string {
 		return 's:' . $text;
