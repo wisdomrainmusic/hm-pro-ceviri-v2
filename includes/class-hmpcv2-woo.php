@@ -49,6 +49,9 @@ final class HMPCv2_Woo {
 		// Cart/Checkout display: force shipping label override (DB-based)
 		add_filter('woocommerce_cart_shipping_method_full_label', array(__CLASS__, 'filter_cart_shipping_method_full_label'), 20, 2);
 		add_filter('woocommerce_shipping_rate_label', array(__CLASS__, 'filter_shipping_rate_label'), 20, 2);
+
+		// Widgets: titles (DB-based)
+		add_filter('widget_title', array(__CLASS__, 'filter_widget_title'), 20, 3);
         }
 
 	public static function filter_available_payment_gateways($gateways) {
@@ -234,6 +237,28 @@ final class HMPCv2_Woo {
 		return $is_free ? $t : $label;
 	}
 
+	public static function filter_widget_title($title, $instance, $id_base) {
+		if (is_admin()) return $title;
+
+		$lang = self::current_lang_code();
+		if ($lang === '') return $title;
+
+		// Default dilde (TR) dokunma
+		$default = 'tr';
+		if (class_exists('HMPCv2_Langs') && method_exists('HMPCv2_Langs', 'default_lang')) {
+			$d = (string) HMPCv2_Langs::default_lang();
+			if ($d !== '') $default = strtolower($d);
+		}
+		if ($lang === $default) return $title;
+
+		$orig = trim((string) $title);
+		if ($orig === '') return $title;
+
+		$t = self::widgets_titles_get($lang, $orig);
+		if ($t === '') $t = self::widgets_titles_get('en', $orig); // EN master fallback (only non-default langs)
+		return $t !== '' ? $t : $title;
+	}
+
 	// ---------- Meta keys ----------
 	private static function k($lang, $field) {
 		return '_hmpcv2_' . strtolower($lang) . '_' . $field;
@@ -314,6 +339,10 @@ final class HMPCv2_Woo {
         private static function cart_shipping_get($lang, $key): string {
                 return self::woo_domain_get($lang, 'cart_shipping', (string) $key);
         }
+
+	private static function widgets_titles_get($lang, $key): string {
+		return self::woo_domain_get($lang, 'widgets_titles', (string) $key);
+	}
 
         private static function woo_domain_get($lang, $domain, $key): string {
                 $dict = self::woo_dict();

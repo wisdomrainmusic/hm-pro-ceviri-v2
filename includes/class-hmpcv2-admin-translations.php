@@ -191,6 +191,17 @@ class HMPCv2_Woo_Presets {
                     ),
                 ),
             ),
+            'widgets_woo_sidebar' => array(
+                'label' => 'Widgets – Woo Sidebar (Titles)',
+                'domains' => array(
+                    'widgets_titles' => array(
+                        'Etkinleştirilmiş filtreler' => 'Active filters',
+                        'Fiyata göre filtrele' => 'Filter by price',
+                        'Ara' => 'Search',
+                        'Ürün ara...' => 'Search products...',
+                    ),
+                ),
+            ),
             'woo_account' => array(
                 'label' => 'Woo Core – My Account',
                 'domains' => array(
@@ -1340,6 +1351,7 @@ final class HMPCv2_Admin_Translations {
         echo '<option value="checkout_misc">Checkout – Misc (Gateway + Privacy)</option>';
         echo '<option value="checkout_fields">Checkout – Fields (Labels)</option>';
         echo '<option value="cart_shipping">Cart – Shipping (Labels)</option>';
+        echo '<option value="widgets_titles">Widgets – Titles</option>';
         echo '<option value="default">default</option>';
         echo '</select></label>';
         echo '<label>Search<br><input type="text" id="hmpcv2-woo-search" placeholder="Search strings" style="width:240px;" /></label>';
