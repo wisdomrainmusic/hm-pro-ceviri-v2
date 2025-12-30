@@ -182,6 +182,15 @@ class HMPCv2_Woo_Presets {
                     ),
                 ),
             ),
+            'cart_shipping' => array(
+                'label' => 'Cart – Shipping (Labels)',
+                'domains' => array(
+                    'cart_shipping' => array(
+                        // Used by woocommerce_package_rates override (HMPCv2_Woo::filter_package_rates)
+                        'free_shipping_label' => 'Free shipping',
+                    ),
+                ),
+            ),
             'woo_account' => array(
                 'label' => 'Woo Core – My Account',
                 'domains' => array(
@@ -1330,6 +1339,7 @@ final class HMPCv2_Admin_Translations {
         echo '<option value="cartflows-pro">cartflows-pro</option>';
         echo '<option value="checkout_misc">Checkout – Misc (Gateway + Privacy)</option>';
         echo '<option value="checkout_fields">Checkout – Fields (Labels)</option>';
+        echo '<option value="cart_shipping">Cart – Shipping (Labels)</option>';
         echo '<option value="default">default</option>';
         echo '</select></label>';
         echo '<label>Search<br><input type="text" id="hmpcv2-woo-search" placeholder="Search strings" style="width:240px;" /></label>';
