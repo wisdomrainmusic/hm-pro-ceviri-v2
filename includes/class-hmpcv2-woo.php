@@ -11,11 +11,14 @@ final class HMPCv2_Woo {
 		add_action('add_meta_boxes', array(__CLASS__, 'add_product_metabox'), 30);
 		add_action('save_post_product', array(__CLASS__, 'save_product_metabox'), 10, 2);
 		
-		// Frontend overrides
-		add_filter('the_title', array(__CLASS__, 'filter_product_title'), 20, 2);
-		add_filter('the_title', array(__CLASS__, 'filter_woo_core_page_title'), 21, 2);
-		add_filter('the_content', array(__CLASS__, 'filter_product_content'), 20);
-		add_filter('woocommerce_short_description', array(__CLASS__, 'filter_product_short_description'), 20);
+                // Frontend overrides
+                add_filter('the_title', array(__CLASS__, 'filter_product_title'), 20, 2);
+                add_filter('the_title', array(__CLASS__, 'filter_woo_core_page_title'), 21, 2);
+                // Shop title: many themes use Woo title hooks (archive) instead of the_title
+                add_filter('woocommerce_page_title', array(__CLASS__, 'filter_shop_page_title'), 20, 1);
+                add_filter('woocommerce_get_page_title', array(__CLASS__, 'filter_shop_get_page_title'), 20, 2);
+                add_filter('the_content', array(__CLASS__, 'filter_product_content'), 20);
+                add_filter('woocommerce_short_description', array(__CLASS__, 'filter_product_short_description'), 20);
 		add_filter('woocommerce_get_endpoint_url', array(__CLASS__, 'filter_woocommerce_endpoint_url'), 10, 4);
 		add_filter('woocommerce_get_myaccount_page_permalink', array(__CLASS__, 'filter_myaccount_page_permalink'), 10, 1);
 
@@ -362,25 +365,40 @@ final class HMPCv2_Woo {
 		return ($p && $p->post_type === 'product');
 	}
 
-	private static function current_lang_non_default() {
-		$lang = HMPCv2_Router::current_lang();
-		$default = HMPCv2_Langs::default_lang();
-		if ($lang === $default) return '';
-		return $lang;
-	}
+        private static function current_lang_non_default() {
+                $lang = HMPCv2_Router::current_lang();
+                $default = HMPCv2_Langs::default_lang();
+                if ($lang === $default) return '';
+                return $lang;
+        }
 
-	public static function filter_product_title($title, $post_id) {
-		if (!self::is_frontend_product_context($post_id)) return $title;
+        private static function get_core_page_title_meta(int $page_id, string $lang): string {
+                if ($page_id <= 0 || $lang === '') return '';
 
-		$lang = self::current_lang_non_default();
-		if ($lang === '') return $title;
+                $tr = (string) get_post_meta($page_id, self::k($lang, 'title'), true);
+                $tr = trim($tr);
+                if ($tr !== '') return $tr;
 
-		$tr = (string) get_post_meta($post_id, self::k($lang, 'title'), true);
-		return $tr !== '' ? $tr : $title;
-	}
+                $fallback_key = '_hmpcv2_title_' . strtolower($lang);
+                $tr2 = (string) get_post_meta($page_id, $fallback_key, true);
+                $tr2 = trim($tr2);
+                if ($tr2 !== '') return $tr2;
 
-	public static function filter_woo_core_page_title($title, $post_id) {
-		if (is_admin()) return $title;
+                return '';
+        }
+
+        public static function filter_product_title($title, $post_id) {
+                if (!self::is_frontend_product_context($post_id)) return $title;
+
+                $lang = self::current_lang_non_default();
+                if ($lang === '') return $title;
+
+                $tr = (string) get_post_meta($post_id, self::k($lang, 'title'), true);
+                return $tr !== '' ? $tr : $title;
+        }
+
+        public static function filter_woo_core_page_title($title, $post_id) {
+                if (is_admin()) return $title;
 
 		$qid = (int) get_queried_object_id();
 		if ($qid <= 0 || (int) $post_id !== $qid) return $title;
@@ -390,20 +408,16 @@ final class HMPCv2_Woo {
 
 		if (!self::is_woo_core_page_id($qid)) return $title;
 
-		$lang = self::current_lang_non_default();
-		if ($lang === '') return $title;
+                $lang = self::current_lang_non_default();
+                if ($lang === '') return $title;
 
-		$tr = (string) get_post_meta($qid, self::k($lang, 'title'), true);
-		if ($tr !== '') return $tr;
+                $tr = self::get_core_page_title_meta($qid, $lang);
+                if ($tr !== '') return $tr;
 
-		$fallback_key = '_hmpcv2_title_' . strtolower($lang);
-		$tr2 = (string) get_post_meta($qid, $fallback_key, true);
-		if ($tr2 !== '') return $tr2;
-
-		// EN fallback for core Woo pages when the WP page title is Turkish
-		if ($lang === 'en') {
-			$shop_id     = (int) get_option('woocommerce_shop_page_id');
-			$cart_id     = (int) get_option('woocommerce_cart_page_id');
+                // EN fallback for core Woo pages when the WP page title is Turkish
+                if ($lang === 'en') {
+                        $shop_id     = (int) get_option('woocommerce_shop_page_id');
+                        $cart_id     = (int) get_option('woocommerce_cart_page_id');
 			$checkout_id = (int) get_option('woocommerce_checkout_page_id');
 			$account_id  = (int) get_option('woocommerce_myaccount_page_id');
 
@@ -413,12 +427,47 @@ final class HMPCv2_Woo {
 			if ($qid === $account_id) return 'My account';
 		}
 
-		return $title;
-	}
+                return $title;
+        }
 
-	public static function filter_product_content($content) {
-		if (is_admin()) return $content;
-		if (!function_exists('is_product') || !is_product()) return $content;
+        public static function filter_shop_page_title($title) {
+                if (is_admin()) return $title;
+                if (!function_exists('is_shop') || !is_shop()) return $title;
+
+                $lang = self::current_lang_non_default();
+                if ($lang === '') return $title;
+
+                $shop_id = (int) get_option('woocommerce_shop_page_id');
+                $tr = self::get_core_page_title_meta($shop_id, $lang);
+
+                if ($tr !== '') return $tr;
+
+                // Keep your EN hard fallback behavior consistent
+                if ($lang === 'en') return 'Shop';
+
+                return $title;
+        }
+
+        public static function filter_shop_get_page_title($title, $page) {
+                if (is_admin()) return $title;
+                if ($page !== 'shop') return $title;
+
+                $lang = self::current_lang_non_default();
+                if ($lang === '') return $title;
+
+                $shop_id = (int) get_option('woocommerce_shop_page_id');
+                $tr = self::get_core_page_title_meta($shop_id, $lang);
+
+                if ($tr !== '') return $tr;
+
+                if ($lang === 'en') return 'Shop';
+
+                return $title;
+        }
+
+        public static function filter_product_content($content) {
+                if (is_admin()) return $content;
+                if (!function_exists('is_product') || !is_product()) return $content;
 
 		// IMPORTANT:
 		// Builders/themes may call the_content() for template posts while on a product page.
