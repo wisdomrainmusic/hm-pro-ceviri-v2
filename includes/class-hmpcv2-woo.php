@@ -103,6 +103,8 @@ final class HMPCv2_Woo {
 
 		$map = array(
 			'billing_city_label' => array('group' => 'billing', 'field' => 'billing_city'),
+			'billing_state_label' => array('group' => 'billing', 'field' => 'billing_state'),
+			'billing_postcode_label' => array('group' => 'billing', 'field' => 'billing_postcode'),
 			'billing_phone_label' => array('group' => 'billing', 'field' => 'billing_phone'),
 			'billing_company_label' => array('group' => 'billing', 'field' => 'billing_company'),
 			'order_comments_label' => array('group' => 'order', 'field' => 'order_comments'),

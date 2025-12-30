@@ -170,16 +170,18 @@ class HMPCv2_Woo_Presets {
                     'privacy_policy_text' => 'Your personal data will be used to process your order, support your experience throughout this website, and for other purposes described in our [privacy_policy].',
                 ),
             ),
-            'checkout_fields' => array(
-                'label' => 'Checkout – Fields (Labels)',
-                'domains' => array(
-                    'checkout_fields' => array(
-                        'billing_city_label' => 'Town / City',
-                        'billing_phone_label' => 'Phone',
-                        'billing_company_label' => 'Company name (optional)',
-                        'order_comments_label' => 'Order notes (optional)',
-                        'coupon_notice_text' => 'Have a coupon? Click here to enter your code.',
-                    ),
+			'checkout_fields' => array(
+				'label' => 'Checkout – Fields (Labels)',
+				'domains' => array(
+					'checkout_fields' => array(
+						'billing_city_label' => 'Town / City',
+						'billing_state_label' => 'State / County',
+						'billing_postcode_label' => 'Postcode / ZIP',
+						'billing_phone_label' => 'Phone',
+						'billing_company_label' => 'Company name (optional)',
+						'order_comments_label' => 'Order notes (optional)',
+						'coupon_notice_text' => 'Have a coupon? Click here to enter your code.',
+					),
                 ),
             ),
             'cart_shipping' => array(
