@@ -5,6 +5,7 @@ if (!defined('ABSPATH')) exit;
 final class HMPCv2_Options {
     const OPT_KEY = 'hmpcv2_settings';
     const TERM_OPT_KEY = 'hmpcv2_term_translations';
+    const STYLE_OPT_KEY = 'hmpcv2_style_settings';
 
     public static function defaults() {
         return array(
@@ -18,6 +19,7 @@ final class HMPCv2_Options {
             'prefix_default_lang' => false,
             'cookie_remember' => true,
             'cookie_days' => 30,
+            // legacy: style used to live here; kept for backwards compat/migration only
             'style' => array(
                 'switcher_z' => 99999,
                 'switcher_bg' => 'rgba(0,0,0,0.35)',
@@ -31,11 +33,69 @@ final class HMPCv2_Options {
         $val = get_option(self::OPT_KEY, null);
         if (!is_array($val)) {
             add_option(self::OPT_KEY, self::defaults());
+            // also ensure style option exists
+            add_option(self::STYLE_OPT_KEY, self::default_style());
             return;
         }
 
         $merged = wp_parse_args($val, self::defaults());
         update_option(self::OPT_KEY, $merged, false);
+
+        // ensure style option exists (and migrate once if needed)
+        self::maybe_migrate_style($merged);
+    }
+
+    public static function default_style() {
+        return array(
+            'switcher_z' => 99999,
+            'switcher_bg' => 'rgba(0,0,0,0.35)',
+            'switcher_color' => '#ffffff',
+            'force_on_hero' => 0,
+        );
+    }
+
+    private static function sanitize_style($style) {
+        if (!is_array($style)) $style = array();
+        $out = array(
+            'switcher_z' => isset($style['switcher_z']) ? (int) $style['switcher_z'] : 99999,
+            // keep as string; do not over-sanitize CSS tokens
+            'switcher_bg' => isset($style['switcher_bg']) ? trim((string) wp_unslash($style['switcher_bg'])) : 'rgba(0,0,0,0.35)',
+            'switcher_color' => isset($style['switcher_color']) ? trim((string) wp_unslash($style['switcher_color'])) : '#ffffff',
+            'force_on_hero' => !empty($style['force_on_hero']) ? 1 : 0,
+        );
+        if ($out['switcher_bg'] === '') $out['switcher_bg'] = 'rgba(0,0,0,0.35)';
+        if ($out['switcher_color'] === '') $out['switcher_color'] = '#ffffff';
+        return $out;
+    }
+
+    private static function maybe_migrate_style($merged_settings = null) {
+        $style_opt = get_option(self::STYLE_OPT_KEY, null);
+        if (is_array($style_opt) && !empty($style_opt)) {
+            // already migrated/exists
+            return;
+        }
+
+        if (!is_array($merged_settings)) {
+            $merged_settings = get_option(self::OPT_KEY, self::defaults());
+        }
+        $legacy = (is_array($merged_settings) && isset($merged_settings['style']) && is_array($merged_settings['style']))
+            ? $merged_settings['style']
+            : self::default_style();
+
+        add_option(self::STYLE_OPT_KEY, self::sanitize_style($legacy));
+    }
+
+    public static function get_style() {
+        // ensure option exists + migrate from legacy if needed
+        self::maybe_migrate_style();
+        $style = get_option(self::STYLE_OPT_KEY, self::default_style());
+        return self::sanitize_style($style);
+    }
+
+    public static function set_style($style) {
+        $clean = self::sanitize_style($style);
+        update_option(self::STYLE_OPT_KEY, $clean, false);
+        return $clean;
     }
 
     public static function get_all() {
@@ -50,14 +110,8 @@ final class HMPCv2_Options {
         $clean['cookie_remember'] = (bool) $clean['cookie_remember'];
         $clean['cookie_days'] = max(1, absint($clean['cookie_days']));
 
-        // style
-        $style = isset($clean['style']) && is_array($clean['style']) ? $clean['style'] : array();
-        $clean['style'] = array(
-            'switcher_z' => isset($style['switcher_z']) ? (int)$style['switcher_z'] : 99999,
-            'switcher_bg' => isset($style['switcher_bg']) ? sanitize_text_field((string)$style['switcher_bg']) : 'rgba(0,0,0,0.35)',
-            'switcher_color' => isset($style['switcher_color']) ? sanitize_text_field((string)$style['switcher_color']) : '#ffffff',
-            'force_on_hero' => !empty($style['force_on_hero']) ? 1 : 0,
-        );
+        // style is now sourced from dedicated option (stable)
+        $clean['style'] = self::get_style();
 
         if (!self::is_language_allowed($clean['default_lang'], $clean['enabled_langs'])) {
             $clean['default_lang'] = $clean['enabled_langs'] ? self::get_first_language($clean['enabled_langs']) : 'tr';
