@@ -229,6 +229,7 @@ class HMPCv2_Router {
         // SAFETY NET: if /<lang>/urun/<slug> falls into 404, rescue it.
         add_action('template_redirect', array(__CLASS__, 'rescue_404_prefixed_product'), 0);
         add_action('template_redirect', array(__CLASS__, 'disable_canonical_on_prefixed_product'), 0);
+        add_action('template_redirect', array(__CLASS__, 'redirect_bare_myaccount_to_lang'), 2);
 
         add_action('parse_request', array(__CLASS__, 'parse_request_lang'), 1);
         add_action('template_redirect', array(__CLASS__, 'canonical_redirect_default_prefix'), 1);
@@ -1186,6 +1187,71 @@ class HMPCv2_Router {
 
         setcookie('hmpcv2_lang', $lang, $expire, COOKIEPATH ?: '/', COOKIE_DOMAIN, is_ssl(), true);
         $_COOKIE['hmpcv2_lang'] = $lang;
+    }
+
+    /**
+     * Safety-net for themes that hardcode "/my-account/" without language prefix.
+     * If user is browsing /{lang}/... and clicks account icon, redirect bare my-account
+     * to /{lang}/my-account/.
+     */
+    public static function redirect_bare_myaccount_to_lang() {
+        if (is_admin() || wp_doing_ajax()) return;
+        if (!function_exists('is_account_page') || !is_account_page()) return;
+
+        if (isset($_GET['hmpc_noredirect']) && (string) $_GET['hmpc_noredirect'] === '1') {
+            return;
+        }
+
+        $uri = isset($_SERVER['REQUEST_URI']) ? (string) $_SERVER['REQUEST_URI'] : '';
+        $path = $uri ? (string) parse_url($uri, PHP_URL_PATH) : '';
+        if ($path === '') return;
+
+        // If already language-prefixed, do nothing.
+        $trim = trim($path, '/');
+        $first = $trim === '' ? '' : strtolower(strtok($trim, '/'));
+        $enabled = HMPCv2_Langs::enabled_langs();
+        if ($first && in_array($first, $enabled, true)) {
+            return;
+        }
+
+        // Determine intended language from referer (best signal for hardcoded header links)
+        $lang = '';
+        $ref = isset($_SERVER['HTTP_REFERER']) ? (string) $_SERVER['HTTP_REFERER'] : '';
+        $ref_path = $ref ? (string) parse_url($ref, PHP_URL_PATH) : '';
+        $ref_trim = $ref_path ? trim($ref_path, '/') : '';
+        $ref_first = $ref_trim === '' ? '' : strtolower(strtok($ref_trim, '/'));
+
+        if ($ref_first && in_array($ref_first, $enabled, true)) {
+            $lang = $ref_first;
+        } elseif (!empty($_COOKIE['hmpcv2_lang'])) {
+            $cookie_lang = HMPCv2_Langs::sanitize_lang_code((string) $_COOKIE['hmpcv2_lang'], '');
+            if ($cookie_lang !== '' && in_array($cookie_lang, $enabled, true)) {
+                $lang = $cookie_lang;
+            }
+        } else {
+            $lang = HMPCv2_Langs::sanitize_lang_code(self::current_lang(), '');
+            if ($lang === '' || !in_array($lang, $enabled, true)) {
+                $lang = '';
+            }
+        }
+
+        if ($lang === '') {
+            return;
+        }
+
+        $default = HMPCv2_Langs::default_lang();
+        if ($lang === $default && !self::prefix_default_lang()) {
+            return;
+        }
+
+        // Build target URL: insert /{lang}/ after site base (supports subdirectory installs)
+        $target = self::apply_lang_to_url(home_url($path), $lang);
+        if (!$target) return;
+
+        $target = add_query_arg('hmpc_noredirect', '1', $target);
+
+        wp_safe_redirect($target, 302);
+        exit;
     }
 
     public static function disable_canonical_on_prefixed_product() {
