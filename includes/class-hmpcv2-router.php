@@ -213,6 +213,8 @@ class HMPCv2_Router {
          */
         add_filter('woocommerce_get_checkout_url', array(__CLASS__, 'filter_woocommerce_url_to_current_lang'), 20, 1);
         add_filter('woocommerce_get_cart_url', array(__CLASS__, 'filter_woocommerce_url_to_current_lang'), 20, 1);
+        // Woo special pages (myaccount) should stay in current language even if the page itself is TR
+        add_filter('woocommerce_get_page_permalink', array(__CLASS__, 'filter_wc_page_permalink'), 20, 2);
 
         // IMPORTANT: Router behavior must be FRONTEND-only
         if (is_admin()) {
@@ -381,6 +383,18 @@ class HMPCv2_Router {
     public static function filter_page_link_to_post_lang($link, $post_id) {
         if (empty($link)) return $link;
 
+        // Woo "My Account" link must follow CURRENT language (fixes header account icon jumping to TR)
+        if (!is_admin() && class_exists('WooCommerce') && function_exists('wc_get_page_id')) {
+            $my_id = (int) wc_get_page_id('myaccount');
+            if ($my_id > 0 && (int) $post_id === $my_id) {
+                $cur = self::current_lang();
+                if (is_string($cur) && $cur !== '') {
+                    return self::apply_lang_to_url($link, $cur);
+                }
+                return $link;
+            }
+        }
+
         if (!class_exists('HMPCv2_Translations')) {
             return $link;
         }
@@ -391,6 +405,29 @@ class HMPCv2_Router {
         }
 
         return self::apply_lang_to_url($link, $lang);
+    }
+
+    /**
+     * Woo permalink generator for core pages (wc_get_page_permalink()).
+     * Ensure My Account stays in current language prefix.
+     *
+     * @param string $link
+     * @param string $page
+     * @return string
+     */
+    public static function filter_wc_page_permalink($link, $page) {
+        if (empty($link) || is_admin()) return $link;
+        if (!class_exists('WooCommerce')) return $link;
+
+        $page = (string) $page;
+        if ($page !== 'myaccount') {
+            return $link;
+        }
+
+        $cur = self::current_lang();
+        if (!is_string($cur) || $cur === '') return $link;
+
+        return self::apply_lang_to_url($link, $cur);
     }
 
     /**
