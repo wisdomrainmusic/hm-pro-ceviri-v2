@@ -10,8 +10,7 @@ final class HMPCv2_Switcher {
 	}
 
         public static function styles() {
-                $opts = HMPCv2_Options::get_all();
-                $style = isset($opts['style']) && is_array($opts['style']) ? $opts['style'] : array();
+                $style = HMPCv2_Options::get_style();
 
                 $z = isset($style['switcher_z']) ? (int)$style['switcher_z'] : 99999;
                 $bg = isset($style['switcher_bg']) ? (string)$style['switcher_bg'] : 'rgba(0,0,0,0.35)';
