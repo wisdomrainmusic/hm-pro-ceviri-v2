@@ -46,6 +46,9 @@ final class HMPCv2_Woo {
 
                 // Cart: shipping method label (e.g., Free shipping) (DB-based)
                 add_filter('woocommerce_package_rates', array(__CLASS__, 'filter_package_rates'), 20, 2);
+		// Cart/Checkout display: force shipping label override (DB-based)
+		add_filter('woocommerce_cart_shipping_method_full_label', array(__CLASS__, 'filter_cart_shipping_method_full_label'), 20, 2);
+		add_filter('woocommerce_shipping_rate_label', array(__CLASS__, 'filter_shipping_rate_label'), 20, 2);
         }
 
 	public static function filter_available_payment_gateways($gateways) {
@@ -173,6 +176,63 @@ final class HMPCv2_Woo {
 
                 return $rates;
         }
+
+	public static function filter_cart_shipping_method_full_label($label, $method) {
+		if (is_admin()) return $label;
+
+		$lang = self::current_lang_code();
+		if ($lang === '') return $label;
+
+		$t = self::cart_shipping_get($lang, 'free_shipping_label');
+		if ($t === '') $t = self::cart_shipping_get('en', 'free_shipping_label');
+		if ($t === '') return $label;
+
+		// $method is WC_Shipping_Rate in cart context
+		$method_id = '';
+		if (is_object($method) && method_exists($method, 'get_method_id')) {
+			$method_id = (string) $method->get_method_id();
+		} elseif (is_object($method) && isset($method->method_id)) {
+			$method_id = (string) $method->method_id;
+		}
+
+		$raw = '';
+		if (is_object($method) && method_exists($method, 'get_label')) {
+			$raw = (string) $method->get_label();
+		} elseif (is_object($method) && isset($method->label)) {
+			$raw = (string) $method->label;
+		}
+
+		$raw_norm = trim(mb_strtolower($raw));
+
+		$is_free = ($method_id === 'free_shipping') || ($raw_norm === 'ücretsiz gönderim') || ($raw_norm === 'free shipping');
+		if (!$is_free) return $label;
+
+		// full label could contain cost HTML etc. free shipping usually no cost, so replace fully
+		return $t;
+	}
+
+	public static function filter_shipping_rate_label($label, $method) {
+		if (is_admin()) return $label;
+
+		$lang = self::current_lang_code();
+		if ($lang === '') return $label;
+
+		$t = self::cart_shipping_get($lang, 'free_shipping_label');
+		if ($t === '') $t = self::cart_shipping_get('en', 'free_shipping_label');
+		if ($t === '') return $label;
+
+		$method_id = '';
+		if (is_object($method) && method_exists($method, 'get_method_id')) {
+			$method_id = (string) $method->get_method_id();
+		} elseif (is_object($method) && isset($method->method_id)) {
+			$method_id = (string) $method->method_id;
+		}
+
+		$norm = trim(mb_strtolower((string) $label));
+		$is_free = ($method_id === 'free_shipping') || ($norm === 'ücretsiz gönderim') || ($norm === 'free shipping');
+
+		return $is_free ? $t : $label;
+	}
 
 	// ---------- Meta keys ----------
 	private static function k($lang, $field) {
