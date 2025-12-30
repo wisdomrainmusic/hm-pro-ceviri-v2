@@ -1256,14 +1256,29 @@ final class HMPCv2_Admin_Translations {
             'force_on_hero' => $force,
         );
 
+        // update_option() returns false when the value is identical (no change),
+        // so we must verify persistence by reading back the stored option.
         $ok = update_option(HMPCv2_Options::OPT_KEY, $current, false);
 
-        // If update_option returns false, do NOT pretend success
-        if (!$ok) {
+        $raw = get_option(HMPCv2_Options::OPT_KEY, HMPCv2_Options::defaults());
+        if (!is_array($raw)) $raw = HMPCv2_Options::defaults();
+
+        $stored_style = isset($raw['style']) && is_array($raw['style']) ? $raw['style'] : array();
+        $attempted_style = $current['style'];
+
+        $matches =
+            isset($stored_style['switcher_z'], $stored_style['switcher_bg'], $stored_style['switcher_color'], $stored_style['force_on_hero']) &&
+            (int) $stored_style['switcher_z'] === (int) $attempted_style['switcher_z'] &&
+            (string) $stored_style['switcher_bg'] === (string) $attempted_style['switcher_bg'] &&
+            (string) $stored_style['switcher_color'] === (string) $attempted_style['switcher_color'] &&
+            (int) $stored_style['force_on_hero'] === (int) $attempted_style['force_on_hero'];
+
+        if (!$ok && !$matches) {
             wp_send_json_error(array(
                 'message' => 'style_not_saved',
                 'debug' => array(
-                    'attempted' => $current['style'],
+                    'attempted' => $attempted_style,
+                    'stored' => $stored_style,
                 ),
             ), 500);
         }
