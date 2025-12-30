@@ -8,6 +8,43 @@ class HMPCv2_Router {
     const QV_LANG = 'hmpcv2_lang';
     const QV_PATH = 'hmpcv2_path';
 
+    /**
+     * Check if main query is available (get_query_var() safe).
+     * WP can call home_url() before WP_Query is initialized (e.g. during plugins_loaded).
+     */
+    private static function is_query_ready() {
+        return isset($GLOBALS['wp_query']) && is_object($GLOBALS['wp_query']);
+    }
+
+    /**
+     * Early-boot language detection without WP_Query.
+     * Uses cookie first, then URL prefix (/en/, /de/, etc.), then default.
+     */
+    private static function detect_lang_early() {
+        $enabled = HMPCv2_Langs::enabled_langs();
+        $default = HMPCv2_Langs::default_lang();
+
+        if (!is_array($enabled) || empty($enabled)) {
+            return $default;
+        }
+
+        // 1) Cookie
+        if (!empty($_COOKIE['hmpcv2_lang'])) {
+            $cookie_lang = HMPCv2_Langs::sanitize_lang_code((string) $_COOKIE['hmpcv2_lang'], '');
+            if ($cookie_lang !== '' && in_array($cookie_lang, $enabled, true)) {
+                return $cookie_lang;
+            }
+        }
+
+        // 2) URL prefix
+        $uri_lang = self::detect_lang_from_request_uri();
+        if ($uri_lang !== '' && in_array($uri_lang, $enabled, true)) {
+            return $uri_lang;
+        }
+
+        return $default;
+    }
+
     private static function is_product_path($path) {
         $p = trim((string) $path, "/ \t\n\r\0\x0B");
         return (strpos($p, 'urun/') === 0);
@@ -503,6 +540,10 @@ class HMPCv2_Router {
             return $uri_lang;
         }
 
+        if (!self::is_query_ready()) {
+            return self::detect_lang_early();
+        }
+
         // 2) Query var
         $qv = get_query_var(self::QV_LANG);
         if (is_string($qv) && $qv !== '') {
@@ -912,7 +953,11 @@ class HMPCv2_Router {
         }
 
         $in_filter = true;
-        $lang = self::current_lang();
+        if (!self::is_query_ready()) {
+            $lang = self::detect_lang_early();
+        } else {
+            $lang = self::current_lang();
+        }
         $target = self::build_lang_home_url($lang);
         $in_filter = false;
 
