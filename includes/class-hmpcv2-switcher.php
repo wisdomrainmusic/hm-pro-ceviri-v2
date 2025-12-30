@@ -23,13 +23,15 @@ final class HMPCv2_Switcher {
                 . '.hmpc-switcher a{padding:6px 10px;border:1px solid rgba(0,0,0,.15);border-radius:6px;text-decoration:none;'
                 . 'background:' . $bg . ';color:' . $color . ';}'
                 . '.hmpc-switcher a.is-active{font-weight:600}'
-                . '.hmpc-dropdown{display:inline-block;position:relative}'
+                . '.hmpc-dropdown{display:inline-block;position:relative;z-index:' . $z . '}'
                 . '.hmpc-dropdown-select{padding:6px 10px;border:1px solid rgba(0,0,0,.15);border-radius:6px;'
-                . 'background:' . $bg . ';color:' . $color . ';}'
-                . '.hmpc-dropdown-select:focus{outline:2px solid rgba(0,0,0,.35);outline-offset:2px}'
-                . '.hmpc-dropdown-select{box-shadow:0 1px 8px rgba(0,0,0,.12)}'
-                . '.hmpc-dropdown-select option{background:' . $bg . ';color:' . $color . ';}'
-                . '.hmpc-dropdown{z-index:' . $z . ';}';
+                . 'background:' . $bg . ' !important;color:' . $color . ' !important;'
+                . '-webkit-text-fill-color:' . $color . ' !important;'
+                . 'box-shadow:0 1px 8px rgba(0,0,0,.12);outline:0;}'
+                . '.hmpc-dropdown-select:focus{outline:2px solid rgba(0,0,0,.35);outline-offset:2px;}'
+                . '.hmpc-dropdown-select option{background:' . $bg . ' !important;color:' . $color . ' !important;}'
+                . '.hmpc-dropdown-select option:checked{background:' . $bg . ' !important;color:' . $color . ' !important;}'
+                . '.hmpc-dropdown-select option:hover{background:' . $bg . ' !important;color:' . $color . ' !important;}';
 
                 if ($force) {
                         // Hero overlay / header stacking context fix
