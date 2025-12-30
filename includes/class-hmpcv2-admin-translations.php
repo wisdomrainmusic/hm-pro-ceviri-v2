@@ -1236,35 +1236,41 @@ final class HMPCv2_Admin_Translations {
     public static function ajax_style_save() {
         self::must_admin();
 
-        $z = isset($_POST['switcher_z']) ? (int) $_POST['switcher_z'] : 99999;
-        $bg = isset($_POST['switcher_bg']) ? (string) $_POST['switcher_bg'] : 'rgba(0,0,0,0.35)';
-        $color = isset($_POST['switcher_color']) ? (string) $_POST['switcher_color'] : '#ffffff';
+        $z     = isset($_POST['switcher_z']) ? (int) $_POST['switcher_z'] : 99999;
+        $bg    = isset($_POST['switcher_bg']) ? trim((string) $_POST['switcher_bg']) : 'rgba(0,0,0,0.35)';
+        $color = isset($_POST['switcher_color']) ? trim((string) $_POST['switcher_color']) : '#ffffff';
         $force = !empty($_POST['force_on_hero']) ? 1 : 0;
 
-        // Keep raw CSS values (only trim); sanitize_text_field can be too aggressive for CSS strings
-        $bg = trim($bg);
-        $color = trim($color);
+        // Keep CSS values as-is (only trim). Do NOT sanitize_text_field here.
+        if ($bg === '') $bg = 'rgba(0,0,0,0.35)';
+        if ($color === '') $color = '#ffffff';
 
-        // Load current settings directly (do NOT rebuild whole settings array)
+        // Update ONLY style inside the existing option payload
         $current = get_option(HMPCv2_Options::OPT_KEY, HMPCv2_Options::defaults());
         if (!is_array($current)) $current = HMPCv2_Options::defaults();
 
-        if (!isset($current['style']) || !is_array($current['style'])) $current['style'] = array();
-
-        $current['style']['switcher_z'] = $z;
-        $current['style']['switcher_bg'] = $bg !== '' ? $bg : 'rgba(0,0,0,0.35)';
-        $current['style']['switcher_color'] = $color !== '' ? $color : '#ffffff';
-        $current['style']['force_on_hero'] = $force;
+        $current['style'] = array(
+            'switcher_z' => $z,
+            'switcher_bg' => $bg,
+            'switcher_color' => $color,
+            'force_on_hero' => $force,
+        );
 
         $ok = update_option(HMPCv2_Options::OPT_KEY, $current, false);
+
+        // If update_option returns false, do NOT pretend success
         if (!$ok) {
             wp_send_json_error(array(
-                'message' => 'update_failed',
+                'message' => 'style_not_saved',
+                'debug' => array(
+                    'attempted' => $current['style'],
+                ),
             ), 500);
         }
 
-        // Return the stored value as the source of truth
+        // Return stored value as truth
         $stored = HMPCv2_Options::get_all();
+
         wp_send_json_success(array(
             'saved' => true,
             'style' => $stored['style'],

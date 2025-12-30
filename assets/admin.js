@@ -60,7 +60,10 @@ jQuery(function ($) {
       switcher_color: $("#hmpcv2-style-color").val() || "",
       force_on_hero: $("#hmpcv2-style-force").is(":checked") ? 1 : 0
     }).done(function (res) {
-      if (!res || !res.success) return alert("Style save failed.");
+      if (!res || !res.success) {
+        const msg = (res && res.data && res.data.message) ? res.data.message : "Style save failed.";
+        return alert(msg);
+      }
       alert("Style saved.");
     }).fail(function () {
       alert("Style save failed.");
