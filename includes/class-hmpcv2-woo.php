@@ -52,6 +52,8 @@ final class HMPCv2_Woo {
 
 		// Widgets: titles (DB-based)
 		add_filter('widget_title', array(__CLASS__, 'filter_widget_title'), 20, 3);
+		// Block widgets: translate sidebar block titles/labels (DB-based)
+		add_filter('render_block', array(__CLASS__, 'filter_render_block_widgets_titles'), 20, 2);
         }
 
 	public static function filter_available_payment_gateways($gateways) {
@@ -257,6 +259,99 @@ final class HMPCv2_Woo {
 		$t = self::widgets_titles_get($lang, $orig);
 		if ($t === '') $t = self::widgets_titles_get('en', $orig); // EN master fallback (only non-default langs)
 		return $t !== '' ? $t : $title;
+	}
+
+	private static function is_default_lang($lang): bool {
+		$default = 'tr';
+		if (class_exists('HMPCv2_Langs') && method_exists('HMPCv2_Langs', 'default_lang')) {
+			$d = (string) HMPCv2_Langs::default_lang();
+			if ($d !== '') $default = strtolower($d);
+		}
+		return strtolower($lang) === $default;
+	}
+
+	private static function widgets_titles_map($lang): array {
+		$dict = self::woo_dict();
+
+		$map = array();
+
+		// lang map
+		if (isset($dict[$lang]['widgets_titles']) && is_array($dict[$lang]['widgets_titles'])) {
+			foreach ($dict[$lang]['widgets_titles'] as $k => $v) {
+				$k = (string) $k;
+				$v = (string) $v;
+				if ($v === '') continue;
+
+				// stored as "s:Original"
+				if (strpos($k, 's:') === 0) $k = substr($k, 2);
+				$k = trim($k);
+				if ($k === '') continue;
+
+				$map[$k] = $v;
+			}
+		}
+
+		// EN fallback (only for non-default languages)
+		if ($lang !== 'en' && !self::is_default_lang($lang) && isset($dict['en']['widgets_titles']) && is_array($dict['en']['widgets_titles'])) {
+			foreach ($dict['en']['widgets_titles'] as $k => $v) {
+				$k = (string) $k;
+				$v = (string) $v;
+				if ($v === '') continue;
+
+				if (strpos($k, 's:') === 0) $k = substr($k, 2);
+				$k = trim($k);
+				if ($k === '') continue;
+
+				// don't override existing lang-specific translations
+				if (!isset($map[$k])) $map[$k] = $v;
+			}
+		}
+
+		return $map;
+	}
+
+	private static function replace_text_in_html_exact($html, array $map): string {
+		if ($html === '' || empty($map)) return $html;
+
+		// Replace only when the text appears as a node between tags: >TEXT<
+		foreach ($map as $orig => $tr) {
+			$orig = (string) $orig;
+			$tr   = (string) $tr;
+			if ($orig === '' || $tr === '') continue;
+
+			// Exact text node replacement (keeps HTML safe)
+			$pattern = '/(>)(\s*)' . preg_quote($orig, '/') . '(\s*)(<)/u';
+			$html = preg_replace($pattern, '$1$2' . $tr . '$3$4', $html);
+		}
+
+		return $html;
+	}
+
+	public static function filter_render_block_widgets_titles($block_content, $block) {
+		if (is_admin()) return $block_content;
+
+		$lang = self::current_lang_code();
+		if ($lang === '' || self::is_default_lang($lang)) return $block_content;
+
+		// We only care about common widget/sidebar-related blocks to avoid global side effects
+		$bn = isset($block['blockName']) ? (string) $block['blockName'] : '';
+
+		$allowed_prefixes = array(
+			'core/',
+			'woocommerce/',
+		);
+
+		$ok = false;
+		foreach ($allowed_prefixes as $p) {
+			if ($bn !== '' && strpos($bn, $p) === 0) { $ok = true; break; }
+		}
+
+		if (!$ok) return $block_content;
+
+		$map = self::widgets_titles_map($lang);
+		if (empty($map)) return $block_content;
+
+		return self::replace_text_in_html_exact((string) $block_content, $map);
 	}
 
 	// ---------- Meta keys ----------
