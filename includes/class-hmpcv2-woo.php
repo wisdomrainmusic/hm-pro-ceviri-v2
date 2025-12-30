@@ -278,6 +278,10 @@ final class HMPCv2_Woo {
 		}
 
 		// fallback → varsayılan dil
+		if (class_exists('HMPCv2_Langs') && method_exists('HMPCv2_Langs', 'default_lang')) {
+			$d = (string) HMPCv2_Langs::default_lang();
+			return $d !== '' ? strtolower($d) : 'tr';
+		}
 		return 'tr';
 	}
 
@@ -321,7 +325,14 @@ final class HMPCv2_Woo {
                         if ($v !== '') return $v;
                 }
 
-                if ($lang !== 'en' && isset($dict['en'][$domain][$entry_key])) {
+                $default = 'tr';
+                if (class_exists('HMPCv2_Langs') && method_exists('HMPCv2_Langs', 'default_lang')) {
+                        $d = (string) HMPCv2_Langs::default_lang();
+                        if ($d !== '') $default = strtolower($d);
+                }
+
+                // EN master fallback only for non-default languages
+                if ($lang !== 'en' && $lang !== $default && isset($dict['en'][$domain][$entry_key])) {
                         $v = (string) $dict['en'][$domain][$entry_key];
                         if ($v !== '') return $v;
                 }
