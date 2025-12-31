@@ -25,6 +25,8 @@ final class HMPCv2_Woo {
 		// Attribute label/value translation (display layer)
 		add_filter('woocommerce_attribute_label', array(__CLASS__, 'filter_attribute_label'), 20, 3);
 		add_filter('woocommerce_display_product_attributes', array(__CLASS__, 'filter_display_attributes'), 20, 2);
+		// Translate variation option names (e.g., "34 beden" -> "Size 34")
+		add_filter('woocommerce_variation_option_name', array(__CLASS__, 'filter_variation_option_name'), 20, 4);
 
 		// Woo core gettext overrides
 		add_filter('gettext', array(__CLASS__, 'woo_gettext_override'), 10, 3);
@@ -831,6 +833,57 @@ final class HMPCv2_Woo {
 		if (is_string($name) && isset($map[$name])) return $map[$name];
 
 		return $label;
+	}
+
+	public static function filter_variation_option_name($term_name, $term = null, $attribute = null, $product = null) {
+		if (is_admin()) return $term_name;
+
+		// Most relevant on single product pages (themes render buttons here)
+		if (function_exists('is_product')) {
+			if (!is_product()) return $term_name;
+		} else {
+			if (!is_singular('product')) return $term_name;
+		}
+
+		$lang = self::current_lang_non_default();
+		if ($lang === '') return $term_name;
+
+		// Resolve product
+		$resolved_product = null;
+		if (is_object($product) && method_exists($product, 'get_id')) {
+			$resolved_product = $product;
+		} else {
+			if (function_exists('wc_get_product')) {
+				global $product;
+				$global_product = $product;
+				if (is_object($global_product) && method_exists($global_product, 'get_id')) {
+					$resolved_product = $global_product;
+				} else {
+					$qid = function_exists('get_queried_object_id') ? (int) get_queried_object_id() : 0;
+					if ($qid > 0) {
+						$p = wc_get_product($qid);
+						if (is_object($p) && method_exists($p, 'get_id')) $resolved_product = $p;
+					}
+				}
+			}
+		}
+
+		if (!$resolved_product || !method_exists($resolved_product, 'get_id')) return $term_name;
+
+		$post_id = (int) $resolved_product->get_id();
+
+		$values_map = get_post_meta($post_id, self::k($lang, 'attr_values'), true);
+		if (!is_array($values_map)) return $term_name;
+
+		// Primary: match by rendered name
+		if (isset($values_map[$term_name])) return $values_map[$term_name];
+
+		// Secondary: if term object is provided
+		if (is_object($term) && isset($term->name) && isset($values_map[$term->name])) {
+			return $values_map[$term->name];
+		}
+
+		return $term_name;
 	}
 
 	public static function filter_display_attributes($attributes, $product) {
