@@ -13,6 +13,21 @@ final class HMPCv2_Resolver {
         return $home . $path;
     }
 
+    /**
+     * Make an absolute internal URL WITHOUT going through home_url() filters.
+     * Accepts either a relative path "/tr/foo/" or an absolute URL.
+     */
+    private static function abs_internal_url(string $maybe_path_or_url): string {
+        $maybe_path_or_url = (string) $maybe_path_or_url;
+        if ($maybe_path_or_url === '') {
+            return self::raw_home_url('/');
+        }
+        if (preg_match('#^https?://#i', $maybe_path_or_url)) {
+            return $maybe_path_or_url;
+        }
+        return self::raw_home_url($maybe_path_or_url);
+    }
+
     public static function resolve_translation_post_id($source_post_id, $target_lang) {
         $source_post_id = (int)$source_post_id;
         $target_lang = HMPCv2_Langs::sanitize_lang_code($target_lang, HMPCv2_Langs::default_lang());
@@ -100,9 +115,15 @@ final class HMPCv2_Resolver {
         if ($current_id > 0) {
             $target_id = (int) self::resolve_translation_post_id($current_id, $target_lang);
             if ($target_id > 0) {
-                $permalink = get_permalink($target_id);
-                if ($permalink) {
-                    return trailingslashit($permalink);
+                /**
+                 * IMPORTANT:
+                 * Do NOT return get_permalink() directly here because page_link filters
+                 * can re-prefix it to the CURRENT language (symptom: TR button href becomes /en/ or /de/).
+                 * Build the URL explicitly for the requested target language.
+                 */
+                $rel = self::permalink_with_lang($target_id, $target_lang); // returns relative path (+query if any)
+                if (is_string($rel) && $rel !== '') {
+                    return self::abs_internal_url($rel);
                 }
             }
         }
@@ -145,19 +166,7 @@ final class HMPCv2_Resolver {
             $new_path .= '/';
         }
 
-        /**
-         * IMPORTANT: When switching to the default language while the default language
-         * is NOT prefixed (e.g. TR lives at "/"), we MUST bypass home_url() because
-         * HMPCv2_Router filters home_url() to keep the current language prefix.
-         *
-         * Symptom: From /en/... you can go to /de or /fr, but clicking TR appears to do
-         * nothing because the generated unprefixed path is passed through home_url(),
-         * which gets re-prefixed back to the current language (cookie/URI).
-         */
-        if ($target_lang === $default && !$prefix_default) {
-            return self::raw_home_url($new_path) . $query;
-        }
-
-        return home_url($new_path) . $query;
+        // Always bypass home_url() filters here to avoid "stick to current language prefix".
+        return self::raw_home_url($new_path) . $query;
     }
 }
