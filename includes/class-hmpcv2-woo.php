@@ -31,6 +31,9 @@ final class HMPCv2_Woo {
 		add_filter('woocommerce_dropdown_variation_attribute_options_html', array(__CLASS__, 'filter_variation_attribute_options_html'), 99, 2);
 		// Translate attribute term names at source (covers swatches plugins that bypass option filters)
 		add_filter('get_term', array(__CLASS__, 'filter_attribute_term_name'), 20, 2);
+		// Translate swatches label HTML (CFVSW outputs labels outside Woo label filters)
+		add_filter('woocommerce_before_variations_form', array(__CLASS__, 'start_buffer_variations_form'), 0);
+		add_filter('woocommerce_after_variations_form', array(__CLASS__, 'end_buffer_variations_form'), 999);
 
 		// Woo core gettext overrides
 		add_filter('gettext', array(__CLASS__, 'woo_gettext_override'), 10, 3);
@@ -988,6 +991,58 @@ final class HMPCv2_Woo {
 		}
 
 		return $html;
+	}
+
+	public static function start_buffer_variations_form() {
+		if (is_admin()) return;
+		if (function_exists('is_product') && !is_product()) return;
+
+		ob_start();
+	}
+
+	public static function end_buffer_variations_form() {
+		if (is_admin()) return;
+		if (function_exists('is_product') && !is_product()) return;
+
+		$html = ob_get_clean();
+		if (!is_string($html) || $html === '') {
+			echo $html;
+			return;
+		}
+
+		$lang = self::current_lang_non_default();
+		if ($lang === '') {
+			echo $html;
+			return;
+		}
+
+		$product_id = function_exists('get_queried_object_id') ? (int) get_queried_object_id() : 0;
+		if ($product_id <= 0) {
+			echo $html;
+			return;
+		}
+
+		$labels_map = get_post_meta($product_id, self::k($lang, 'attr_labels'), true);
+		if (!is_array($labels_map) || empty($labels_map)) {
+			echo $html;
+			return;
+		}
+
+		// Longer keys first
+		uksort($labels_map, function($a, $b) {
+			return strlen((string) $b) <=> strlen((string) $a);
+		});
+
+		foreach ($labels_map as $from => $to) {
+			if (!is_string($from) || $from === '') continue;
+			if (!is_string($to)) $to = (string) $to;
+
+			// Replace common label patterns safely
+			$html = str_replace('>' . esc_html($from) . '<', '>' . esc_html($to) . '<', $html);
+			$html = str_replace($from, $to, $html);
+		}
+
+		echo $html;
 	}
 
 	public static function filter_display_attributes($attributes, $product) {
