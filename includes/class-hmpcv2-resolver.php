@@ -3,6 +3,16 @@ if (!defined('ABSPATH')) exit;
 
 final class HMPCv2_Resolver {
 
+    private static function raw_home_url(string $path = '/'): string {
+        $home = (string) get_option('home');
+        if ($home === '') {
+            return home_url($path);
+        }
+        $home = rtrim($home, '/');
+        $path = '/' . ltrim((string) $path, '/');
+        return $home . $path;
+    }
+
     public static function resolve_translation_post_id($source_post_id, $target_lang) {
         $source_post_id = (int)$source_post_id;
         $target_lang = HMPCv2_Langs::sanitize_lang_code($target_lang, HMPCv2_Langs::default_lang());
@@ -133,6 +143,11 @@ final class HMPCv2_Resolver {
 
         if (substr($new_path, -1) !== '/') {
             $new_path .= '/';
+        }
+
+        // For default language root ("/"), bypass home_url() filter.
+        if ($target_lang === $default && !$prefix_default && $is_root) {
+            return self::raw_home_url('/') . $query;
         }
 
         return home_url($new_path) . $query;
