@@ -29,6 +29,8 @@ final class HMPCv2_Woo {
 		add_filter('woocommerce_variation_option_name', array(__CLASS__, 'filter_variation_option_name'), 20, 4);
 		// Translate variation options HTML (covers swatches plugins like CFVSW)
 		add_filter('woocommerce_dropdown_variation_attribute_options_html', array(__CLASS__, 'filter_variation_attribute_options_html'), 99, 2);
+		// Translate attribute term names at source (covers swatches plugins that bypass option filters)
+		add_filter('get_term', array(__CLASS__, 'filter_attribute_term_name'), 20, 3);
 
 		// Woo core gettext overrides
 		add_filter('gettext', array(__CLASS__, 'woo_gettext_override'), 10, 3);
@@ -792,6 +794,38 @@ final class HMPCv2_Woo {
 
 		$tr = (string) get_post_meta($post_id, self::k($lang, 'short'), true);
 		return $tr !== '' ? $tr : $short;
+	}
+
+	public static function filter_attribute_term_name($term, $taxonomy, $args) {
+		if (is_admin()) return $term;
+
+		// Only single product page
+		if (function_exists('is_product')) {
+			if (!is_product()) return $term;
+		} else {
+			if (!is_singular('product')) return $term;
+		}
+
+		$lang = self::current_lang_non_default();
+		if ($lang === '') return $term;
+
+		// Only Woo attribute taxonomies (pa_*)
+		if (!is_string($taxonomy) || strpos($taxonomy, 'pa_') !== 0) return $term;
+
+		// Resolve current product id
+		$product_id = function_exists('get_queried_object_id') ? (int) get_queried_object_id() : 0;
+		if ($product_id <= 0) return $term;
+
+		$values_map = get_post_meta($product_id, self::k($lang, 'attr_values'), true);
+		if (!is_array($values_map) || empty($values_map)) return $term;
+
+		if (is_object($term) && isset($term->name) && is_string($term->name) && $term->name !== '') {
+			if (isset($values_map[$term->name])) {
+				$term->name = $values_map[$term->name];
+			}
+		}
+
+		return $term;
 	}
 
 	public static function filter_attribute_label($label, $name, $maybe_product) {
