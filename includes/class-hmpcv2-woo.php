@@ -30,7 +30,7 @@ final class HMPCv2_Woo {
 		// Translate variation options HTML (covers swatches plugins like CFVSW)
 		add_filter('woocommerce_dropdown_variation_attribute_options_html', array(__CLASS__, 'filter_variation_attribute_options_html'), 99, 2);
 		// Translate attribute term names at source (covers swatches plugins that bypass option filters)
-		add_filter('get_term', array(__CLASS__, 'filter_attribute_term_name'), 20, 3);
+		add_filter('get_term', array(__CLASS__, 'filter_attribute_term_name'), 20, 2);
 
 		// Woo core gettext overrides
 		add_filter('gettext', array(__CLASS__, 'woo_gettext_override'), 10, 3);
@@ -796,7 +796,7 @@ final class HMPCv2_Woo {
 		return $tr !== '' ? $tr : $short;
 	}
 
-	public static function filter_attribute_term_name($term, $taxonomy, $args) {
+	public static function filter_attribute_term_name($term, $taxonomy) {
 		if (is_admin()) return $term;
 
 		// Only single product page
