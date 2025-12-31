@@ -5261,7 +5261,7 @@ class HMPCv2_Woo_Presets {
 						'billing_phone_label' => 'Phone',
 						'billing_company_label' => 'Company name (optional)',
 						'order_comments_label' => 'Order notes (optional)',
-						'coupon_notice_text' => 'Have a coupon? Click here to enter your code.',
+						'coupon_notice_text' => 'Have a coupon? <a href="#" class="showcoupon">Click here to enter your code.</a>',
 					),
                 ),
             ),
@@ -5709,7 +5709,20 @@ final class HMPCv2_Admin_Translations {
         $domain = isset($_POST['domain']) ? sanitize_text_field((string) $_POST['domain']) : '';
         $original = isset($_POST['original']) ? sanitize_text_field((string) $_POST['original']) : '';
         $context = isset($_POST['context']) ? sanitize_text_field((string) $_POST['context']) : '';
-        $translation = isset($_POST['translation']) ? sanitize_textarea_field((string) $_POST['translation']) : '';
+        // Default: plain text only. Some keys (e.g., coupon_notice_text) need a tiny bit of safe HTML.
+        $translation_raw = isset($_POST['translation']) ? (string) $_POST['translation'] : '';
+        $translation = sanitize_textarea_field($translation_raw);
+
+        // Allow Woo's coupon reveal markup to be stored (keeps class="showcoupon" so JS can bind).
+        if ($domain === 'checkout_fields' && $original === 'coupon_notice_text') {
+            $allowed = array(
+                'a' => array(
+                    'href'  => true,
+                    'class' => true,
+                ),
+            );
+            $translation = wp_kses($translation_raw, $allowed);
+        }
 
         if ($lang === '' || $domain === '' || trim($original) === '') {
             wp_send_json_error(array('message' => 'bad_input'), 400);
@@ -5872,7 +5885,19 @@ final class HMPCv2_Admin_Translations {
                         $translation = $is_map ? (string) $v : (string) $v;
 
                         $original = sanitize_text_field($original);
+
+                        // Default: strip tags. Exception: Woo coupon notice needs safe <a class="showcoupon">...</a>.
+                        $translation_raw = $translation;
                         $translation = sanitize_text_field($translation);
+                        if ($domain === 'checkout_fields' && $original === 'coupon_notice_text') {
+                            $allowed = array(
+                                'a' => array(
+                                    'href'  => true,
+                                    'class' => true,
+                                ),
+                            );
+                            $translation = wp_kses((string) $translation_raw, $allowed);
+                        }
 
                         if ($original === '') continue;
 

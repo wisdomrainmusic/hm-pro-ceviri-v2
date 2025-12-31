@@ -137,7 +137,18 @@ final class HMPCv2_Woo {
                 if ($lang === '') return $message;
 
                 $text = self::checkout_fields_get($lang, 'coupon_notice_text');
-                return $text !== '' ? $text : $message;
+                if ($text === '') return $message;
+
+                // Allow only the specific markup Woo expects for the coupon revealer.
+                // Important: we must keep the `class="showcoupon"` attribute so Woo's JS can bind.
+                $allowed = array(
+                        'a' => array(
+                                'href'  => true,
+                                'class' => true,
+                        ),
+                );
+
+                return wp_kses($text, $allowed);
         }
 
         public static function filter_package_rates($rates, $package) {
@@ -444,7 +455,7 @@ final class HMPCv2_Woo {
 				'billing_phone_label'    => 'Phone',
 				'billing_company_label'  => 'Company name (optional)',
 				'order_comments_label'   => 'Order notes (optional)',
-				'coupon_notice_text'     => 'Have a coupon? Click here to enter your code.',
+				'coupon_notice_text'     => 'Have a coupon? <a href="#" class="showcoupon">Click here to enter your code.</a>',
 			);
 		}
 
