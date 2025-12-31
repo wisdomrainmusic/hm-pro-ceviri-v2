@@ -299,10 +299,30 @@ class HMPCv2_Router {
      * Apply the current language prefix to an internal URL.
      */
     public static function apply_current_lang_to_url($url) {
-        if (is_admin() || wp_doing_ajax()) return $url;
+        if (is_admin()) return $url;
         if (!self::is_internal_url($url)) return $url;
 
         $current = HMPCv2_Langs::get_current_language();
+
+        // AJAX context (Woo mini-cart fragments)
+        if (wp_doing_ajax()) {
+            if (empty($current) && !empty($_COOKIE['hmpcv2_lang'])) {
+                $current = sanitize_key($_COOKIE['hmpcv2_lang']);
+            }
+
+            if (empty($current) && !empty($_SERVER['HTTP_REFERER'])) {
+                $ref_path = wp_parse_url($_SERVER['HTTP_REFERER'], PHP_URL_PATH);
+                if ($ref_path) {
+                    $segments = array_values(array_filter(explode('/', $ref_path)));
+                    if (!empty($segments[0])) {
+                        $current = sanitize_key($segments[0]);
+                    }
+                }
+            }
+
+            if (empty($current)) return $url;
+        }
+
         return self::apply_lang_to_url($url, $current);
     }
 
