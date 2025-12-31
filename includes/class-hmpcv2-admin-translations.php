@@ -100,6 +100,15 @@ class HMPCv2_Woo_Presets {
                             'Neues Passwort (leer lassen, um es nicht zu ändern)',
                         'Confirm new password' => 'Neues Passwort bestätigen',
                         'Save changes' => 'Änderungen speichern',
+                        // Order tracking shortcode ([woocommerce_order_tracking])
+'To track your order please enter your Order ID in the box below and press the "Track" button. This was given to you on your receipt and in the confirmation email you should have received.' =>
+    'Um deine Bestellung zu verfolgen, gib bitte unten deine Bestellnummer ein und klicke auf „Verfolgen“. Du findest sie auf deiner Quittung und in der Bestätigungs-E-Mail.',
+'Order ID' => 'Bestellnummer',
+'Billing email' => 'Rechnungs-E-Mail',
+'Found in your order confirmation email.' => 'In deiner Bestellbestätigung zu finden.',
+'Email you used during checkout.' => 'E-Mail, die du beim Checkout verwendet hast.',
+'Track' => 'Verfolgen',
+
                     ),
                 ),
             ),
@@ -218,6 +227,14 @@ class HMPCv2_Woo_Presets {
                 'Nueva contraseña (dejar en blanco para no cambiarla)',
             'Confirm new password' => 'Confirmar nueva contraseña',
             'Save changes' => 'Guardar cambios',
+            // Order tracking shortcode ([woocommerce_order_tracking]) — Spanish (es)
+'To track your order please enter your Order ID in the box below and press the "Track" button. This was given to you on your receipt and in the confirmation email you should have received.' =>
+    'Para rastrear tu pedido, introduce tu número de pedido en el campo de abajo y pulsa el botón «Rastrear». Lo encontrarás en tu recibo y en el correo electrónico de confirmación que deberías haber recibido.',
+'Order ID' => 'Número de pedido',
+'Billing email' => 'Correo electrónico de facturación',
+'Found in your order confirmation email.' => 'Se encuentra en el correo electrónico de confirmación de tu pedido.',
+'Email you used during checkout.' => 'Correo electrónico que utilizaste durante el pago.',
+'Track' => 'Rastrear',
         ),
     ),
 ),
@@ -336,6 +353,14 @@ class HMPCv2_Woo_Presets {
                 'Nova senha (deixe em branco para não alterar)',
             'Confirm new password' => 'Confirmar nova senha',
             'Save changes' => 'Salvar alterações',
+            // Order tracking shortcode ([woocommerce_order_tracking]) — Portuguese (pt)
+'To track your order please enter your Order ID in the box below and press the "Track" button. This was given to you on your receipt and in the confirmation email you should have received.' =>
+    'Para acompanhar o seu pedido, insira o número do pedido no campo abaixo e clique no botão «Rastrear». Ele está indicado no seu recibo e no e-mail de confirmação que você deve ter recebido.',
+'Order ID' => 'Número do pedido',
+'Billing email' => 'E-mail de faturação',
+'Found in your order confirmation email.' => 'Indicado no e-mail de confirmação do seu pedido.',
+'Email you used during checkout.' => 'E-mail utilizado durante o checkout.',
+'Track' => 'Rastrear',
         ),
     ),
 ),
@@ -454,6 +479,14 @@ class HMPCv2_Woo_Presets {
                 'Nieuw wachtwoord (leeg laten om niet te wijzigen)',
             'Confirm new password' => 'Nieuw wachtwoord bevestigen',
             'Save changes' => 'Wijzigingen opslaan',
+            // Order tracking shortcode ([woocommerce_order_tracking]) — Dutch (nl)
+'To track your order please enter your Order ID in the box below and press the "Track" button. This was given to you on your receipt and in the confirmation email you should have received.' =>
+    'Om je bestelling te volgen, voer je hieronder je bestelnummer in en klik je op de knop «Volgen». Je vindt dit nummer op je ontvangstbewijs en in de bevestigingsmail die je hebt ontvangen.',
+'Order ID' => 'Bestelnummer',
+'Billing email' => 'Factuur-e-mailadres',
+'Found in your order confirmation email.' => 'Te vinden in de bevestigingsmail van je bestelling.',
+'Email you used during checkout.' => 'E-mailadres dat je tijdens het afrekenen hebt gebruikt.',
+'Track' => 'Volgen',
         ),
     ),
 ),
@@ -572,6 +605,14 @@ class HMPCv2_Woo_Presets {
                 'Nowe hasło (pozostaw puste, aby nie zmieniać)',
             'Confirm new password' => 'Potwierdź nowe hasło',
             'Save changes' => 'Zapisz zmiany',
+            // Order tracking shortcode ([woocommerce_order_tracking]) — Polish (pl)
+'To track your order please enter your Order ID in the box below and press the "Track" button. This was given to you on your receipt and in the confirmation email you should have received.' =>
+    'Aby śledzić swoje zamówienie, wpisz numer zamówienia w polu poniżej i kliknij przycisk „Śledź”. Znajdziesz go na paragonie oraz w e-mailu potwierdzającym, który powinieneś otrzymać.',
+'Order ID' => 'Numer zamówienia',
+'Billing email' => 'Adres e-mail do faktury',
+'Found in your order confirmation email.' => 'Znajduje się w e-mailu potwierdzającym zamówienie.',
+'Email you used during checkout.' => 'Adres e-mail użyty podczas realizacji zamówienia.',
+'Track' => 'Śledź',
         ),
     ),
 ),
@@ -690,6 +731,14 @@ class HMPCv2_Woo_Presets {
                 'Nové heslo (ponechte prázdné, pokud jej nechcete měnit)',
             'Confirm new password' => 'Potvrdit nové heslo',
             'Save changes' => 'Uložit změny',
+            // Order tracking shortcode ([woocommerce_order_tracking]) — Czech (cs)
+'To track your order please enter your Order ID in the box below and press the "Track" button. This was given to you on your receipt and in the confirmation email you should have received.' =>
+    'Pro sledování své objednávky zadejte číslo objednávky do pole níže a klikněte na tlačítko „Sledovat“. Najdete jej na účtence a v potvrzovacím e-mailu, který jste obdrželi.',
+'Order ID' => 'Číslo objednávky',
+'Billing email' => 'Fakturační e-mail',
+'Found in your order confirmation email.' => 'Najdete v potvrzovacím e-mailu k objednávce.',
+'Email you used during checkout.' => 'E-mail použitý při dokončení objednávky.',
+'Track' => 'Sledovat',
         ),
     ),
 ),
@@ -808,6 +857,14 @@ class HMPCv2_Woo_Presets {
                 'Nové heslo (ponechajte prázdne, ak ho nechcete meniť)',
             'Confirm new password' => 'Potvrdiť nové heslo',
             'Save changes' => 'Uložiť zmeny',
+            // Order tracking shortcode ([woocommerce_order_tracking]) — Slovak (sk)
+'To track your order please enter your Order ID in the box below and press the "Track" button. This was given to you on your receipt and in the confirmation email you should have received.' =>
+    'Ak chcete sledovať svoju objednávku, zadajte číslo objednávky do poľa nižšie a kliknite na tlačidlo „Sledovať“. Nájdete ho na potvrdení o platbe a v potvrdzovacom e-maile, ktorý ste dostali.',
+'Order ID' => 'Číslo objednávky',
+'Billing email' => 'Fakturačný e-mail',
+'Found in your order confirmation email.' => 'Nájdete v potvrdzovacom e-maile k objednávke.',
+'Email you used during checkout.' => 'E-mail použitý pri dokončení objednávky.',
+'Track' => 'Sledovať',
         ),
     ),
 ),
@@ -926,6 +983,14 @@ class HMPCv2_Woo_Presets {
                 'Új jelszó (hagyd üresen, ha nem szeretnéd módosítani)',
             'Confirm new password' => 'Új jelszó megerősítése',
             'Save changes' => 'Változtatások mentése',
+            // Order tracking shortcode ([woocommerce_order_tracking]) — Hungarian (hu)
+'To track your order please enter your Order ID in the box below and press the "Track" button. This was given to you on your receipt and in the confirmation email you should have received.' =>
+    'A rendelés nyomon követéséhez add meg a rendelési azonosítót az alábbi mezőben, majd kattints a „Követés” gombra. A rendelési azonosítót a nyugtán és a visszaigazoló e-mailben találod.',
+'Order ID' => 'Rendelési azonosító',
+'Billing email' => 'Számlázási e-mail',
+'Found in your order confirmation email.' => 'A rendelést visszaigazoló e-mailben található.',
+'Email you used during checkout.' => 'A fizetés során használt e-mail cím.',
+'Track' => 'Követés',
         ),
     ),
 ),
@@ -1044,6 +1109,14 @@ class HMPCv2_Woo_Presets {
                 'Нова парола (оставете празно, за да не я променяте)',
             'Confirm new password' => 'Потвърдете новата парола',
             'Save changes' => 'Запази промените',
+            // Order tracking shortcode ([woocommerce_order_tracking]) — Bulgarian (bg)
+'To track your order please enter your Order ID in the box below and press the "Track" button. This was given to you on your receipt and in the confirmation email you should have received.' =>
+    'За да проследите поръчката си, въведете номера на поръчката в полето по-долу и натиснете бутона „Проследи“. Той се намира на вашата разписка и в имейла за потвърждение, който сте получили.',
+'Order ID' => 'Номер на поръчката',
+'Billing email' => 'Имейл за фактуриране',
+'Found in your order confirmation email.' => 'Намира се в имейла за потвърждение на поръчката.',
+'Email you used during checkout.' => 'Имейлът, използван при плащането.',
+'Track' => 'Проследи',
         ),
     ),
 ),
@@ -1162,6 +1235,14 @@ class HMPCv2_Woo_Presets {
                 'Νέος κωδικός πρόσβασης (αφήστε κενό για να μην αλλάξει)',
             'Confirm new password' => 'Επιβεβαίωση νέου κωδικού πρόσβασης',
             'Save changes' => 'Αποθήκευση αλλαγών',
+            // Order tracking shortcode ([woocommerce_order_tracking]) — Greek (el)
+'To track your order please enter your Order ID in the box below and press the "Track" button. This was given to you on your receipt and in the confirmation email you should have received.' =>
+    'Για να παρακολουθήσετε την παραγγελία σας, εισαγάγετε τον αριθμό παραγγελίας στο πεδίο παρακάτω και πατήστε το κουμπί «Παρακολούθηση». Θα τον βρείτε στην απόδειξή σας και στο email επιβεβαίωσης που έχετε λάβει.',
+'Order ID' => 'Αριθμός παραγγελίας',
+'Billing email' => 'Email χρέωσης',
+'Found in your order confirmation email.' => 'Βρίσκεται στο email επιβεβαίωσης της παραγγελίας σας.',
+'Email you used during checkout.' => 'Το email που χρησιμοποιήσατε κατά την ολοκλήρωση της αγοράς.',
+'Track' => 'Παρακολούθηση',
         ),
     ),
 ),
@@ -1280,6 +1361,14 @@ class HMPCv2_Woo_Presets {
                 'Nytt lösenord (lämna tomt för att inte ändra)',
             'Confirm new password' => 'Bekräfta nytt lösenord',
             'Save changes' => 'Spara ändringar',
+            // Order tracking shortcode ([woocommerce_order_tracking]) — Swedish (sv)
+'To track your order please enter your Order ID in the box below and press the "Track" button. This was given to you on your receipt and in the confirmation email you should have received.' =>
+    'För att spåra din beställning, ange ditt ordernummer i fältet nedan och klicka på knappen ”Spåra”. Du hittar det på ditt kvitto och i bekräftelsemejlet som du har fått.',
+'Order ID' => 'Ordernummer',
+'Billing email' => 'Fakturerings-e-post',
+'Found in your order confirmation email.' => 'Finns i bekräftelsemejlet för din beställning.',
+'Email you used during checkout.' => 'E-postadressen du använde vid utcheckningen.',
+'Track' => 'Spåra',
         ),
     ),
 ),
@@ -1398,6 +1487,14 @@ class HMPCv2_Woo_Presets {
                 'Nytt passord (la stå tomt for å ikke endre)',
             'Confirm new password' => 'Bekreft nytt passord',
             'Save changes' => 'Lagre endringer',
+            // Order tracking shortcode ([woocommerce_order_tracking]) — Norwegian (no)
+'To track your order please enter your Order ID in the box below and press the "Track" button. This was given to you on your receipt and in the confirmation email you should have received.' =>
+    'For å spore bestillingen din, skriv inn ordrenummeret i feltet nedenfor og klikk på knappen «Spor». Du finner det på kvitteringen din og i bekreftelses-e-posten du har mottatt.',
+'Order ID' => 'Ordrenummer',
+'Billing email' => 'Fakturerings-e-post',
+'Found in your order confirmation email.' => 'Finnes i e-posten med ordrebekreftelsen.',
+'Email you used during checkout.' => 'E-posten du brukte under utsjekking.',
+'Track' => 'Spor',
         ),
     ),
 ),
@@ -1516,6 +1613,14 @@ class HMPCv2_Woo_Presets {
                 'Ny adgangskode (lad stå tom for ikke at ændre)',
             'Confirm new password' => 'Bekræft ny adgangskode',
             'Save changes' => 'Gem ændringer',
+            // Order tracking shortcode ([woocommerce_order_tracking]) — Danish (da)
+'To track your order please enter your Order ID in the box below and press the "Track" button. This was given to you on your receipt and in the confirmation email you should have received.' =>
+    'For at spore din ordre skal du indtaste dit ordrenummer i feltet nedenfor og klikke på knappen „Spor“. Du finder det på din kvittering og i den bekræftelsesmail, du har modtaget.',
+'Order ID' => 'Ordrenummer',
+'Billing email' => 'Fakturerings-e-mail',
+'Found in your order confirmation email.' => 'Findes i e-mailen med din ordrebekræftelse.',
+'Email you used during checkout.' => 'Den e-mailadresse, du brugte under checkout.',
+'Track' => 'Spor',
         ),
     ),
 ),
@@ -1634,6 +1739,14 @@ class HMPCv2_Woo_Presets {
                 'Uusi salasana (jätä tyhjäksi, jos et halua muuttaa)',
             'Confirm new password' => 'Vahvista uusi salasana',
             'Save changes' => 'Tallenna muutokset',
+            // Order tracking shortcode ([woocommerce_order_tracking]) — Finnish (fi)
+'To track your order please enter your Order ID in the box below and press the "Track" button. This was given to you on your receipt and in the confirmation email you should have received.' =>
+    'Seurataksesi tilaustasi, syötä tilausnumerosi alla olevaan kenttään ja paina painiketta ”Seuraa”. Löydät sen kuitistasi ja vahvistussähköpostista, jonka olet saanut.',
+'Order ID' => 'Tilausnumero',
+'Billing email' => 'Laskutussähköposti',
+'Found in your order confirmation email.' => 'Löytyy tilausvahvistussähköpostista.',
+'Email you used during checkout.' => 'Sähköpostiosoite, jota käytit kassalla.',
+'Track' => 'Seuraa',
         ),
     ),
 ),
@@ -1752,6 +1865,14 @@ class HMPCv2_Woo_Presets {
                 'Nýtt lykilorð (skildu eftir autt til að breyta ekki)',
             'Confirm new password' => 'Staðfesta nýtt lykilorð',
             'Save changes' => 'Vista breytingar',
+            // Order tracking shortcode ([woocommerce_order_tracking]) — Icelandic (is)
+'To track your order please enter your Order ID in the box below and press the "Track" button. This was given to you on your receipt and in the confirmation email you should have received.' =>
+    'Til að fylgjast með pöntuninni þinni skaltu slá inn pöntunarnúmerið í reitinn hér að neðan og smella á hnappinn „Fylgjast með“. Þú finnur það á kvittuninni þinni og í staðfestingarpóstinum sem þú hefur fengið.',
+'Order ID' => 'Pöntunarnúmer',
+'Billing email' => 'Netfang fyrir reikning',
+'Found in your order confirmation email.' => 'Finnst í staðfestingarpósti pöntunarinnar.',
+'Email you used during checkout.' => 'Netfangið sem þú notaðir við greiðslu.',
+'Track' => 'Fylgjast með',
         ),
     ),
 ),
@@ -1870,6 +1991,14 @@ class HMPCv2_Woo_Presets {
                 'Uus parool (jäta tühjaks, kui ei soovi muuta)',
             'Confirm new password' => 'Kinnita uus parool',
             'Save changes' => 'Salvesta muudatused',
+            // Order tracking shortcode ([woocommerce_order_tracking]) — Estonian (et)
+'To track your order please enter your Order ID in the box below and press the "Track" button. This was given to you on your receipt and in the confirmation email you should have received.' =>
+    'Oma tellimuse jälgimiseks sisesta allolevasse lahtrisse tellimuse number ja vajuta nuppu „Jälgi“. Selle leiad oma kviitungilt ja kinnitusmeilist, mille oled saanud.',
+'Order ID' => 'Tellimuse number',
+'Billing email' => 'Arveldusmeil',
+'Found in your order confirmation email.' => 'Leiad tellimuse kinnitusmeilist.',
+'Email you used during checkout.' => 'Kassas kasutatud e-posti aadress.',
+'Track' => 'Jälgi',
         ),
     ),
 ),
@@ -1988,6 +2117,14 @@ class HMPCv2_Woo_Presets {
                 'Jaunā parole (atstājiet tukšu, ja nemaināt)',
             'Confirm new password' => 'Apstiprināt jauno paroli',
             'Save changes' => 'Saglabāt izmaiņas',
+            // Order tracking shortcode ([woocommerce_order_tracking]) — Latvian (lv)
+'To track your order please enter your Order ID in the box below and press the "Track" button. This was given to you on your receipt and in the confirmation email you should have received.' =>
+    'Lai izsekotu savu pasūtījumu, ievadiet pasūtījuma numuru zemāk esošajā laukā un nospiediet pogu “Izsekot”. To atradīsiet savā kvītī un apstiprinājuma e-pastā, kuru esat saņēmis.',
+'Order ID' => 'Pasūtījuma numurs',
+'Billing email' => 'Rēķina e-pasts',
+'Found in your order confirmation email.' => 'Atrodams pasūtījuma apstiprinājuma e-pastā.',
+'Email you used during checkout.' => 'E-pasta adrese, kuru izmantojāt norēķinu laikā.',
+'Track' => 'Izsekot',
         ),
     ),
 ),
@@ -2106,6 +2243,14 @@ class HMPCv2_Woo_Presets {
                 'Naujas slaptažodis (palikite tuščią, jei nenorite keisti)',
             'Confirm new password' => 'Patvirtinti naują slaptažodį',
             'Save changes' => 'Išsaugoti pakeitimus',
+            // Order tracking shortcode ([woocommerce_order_tracking]) — Lithuanian (lt)
+'To track your order please enter your Order ID in the box below and press the "Track" button. This was given to you on your receipt and in the confirmation email you should have received.' =>
+    'Norėdami sekti savo užsakymą, įveskite užsakymo numerį į žemiau esantį lauką ir paspauskite mygtuką „Sekti“. Jį rasite savo kvite ir patvirtinimo el. laiške, kurį gavote.',
+'Order ID' => 'Užsakymo numeris',
+'Billing email' => 'Sąskaitos el. paštas',
+'Found in your order confirmation email.' => 'Rasite užsakymo patvirtinimo el. laiške.',
+'Email you used during checkout.' => 'El. pašto adresas, naudotas atsiskaitymo metu.',
+'Track' => 'Sekti',
         ),
     ),
 ),
@@ -2224,6 +2369,14 @@ class HMPCv2_Woo_Presets {
                 'Novo geslo (pustite prazno, če ga ne želite spremeniti)',
             'Confirm new password' => 'Potrdi novo geslo',
             'Save changes' => 'Shrani spremembe',
+            // Order tracking shortcode ([woocommerce_order_tracking]) — Slovenian (sl)
+'To track your order please enter your Order ID in the box below and press the "Track" button. This was given to you on your receipt and in the confirmation email you should have received.' =>
+    'Če želite slediti svojemu naročilu, v spodnje polje vnesite številko naročila in kliknite gumb »Sledi«. Najdete jo na potrdilu o plačilu in v potrditvenem e-poštnem sporočilu, ki ste ga prejeli.',
+'Order ID' => 'Številka naročila',
+'Billing email' => 'E-pošta za obračun',
+'Found in your order confirmation email.' => 'Najdete v potrditvenem e-poštnem sporočilu naročila.',
+'Email you used during checkout.' => 'E-poštni naslov, uporabljen ob zaključku nakupa.',
+'Track' => 'Sledi',
         ),
     ),
 ),
@@ -2342,6 +2495,14 @@ class HMPCv2_Woo_Presets {
                 'Nova lozinka (ostavite prazno ako ne želite promijeniti)',
             'Confirm new password' => 'Potvrdite novu lozinku',
             'Save changes' => 'Spremi promjene',
+            // Order tracking shortcode ([woocommerce_order_tracking]) — Croatian (hr)
+'To track your order please enter your Order ID in the box below and press the "Track" button. This was given to you on your receipt and in the confirmation email you should have received.' =>
+    'Kako biste pratili svoju narudžbu, unesite broj narudžbe u polje ispod i kliknite gumb „Prati“. Broj se nalazi na vašem računu i u potvrdnom e-mailu koji ste primili.',
+'Order ID' => 'Broj narudžbe',
+'Billing email' => 'E-mail za naplatu',
+'Found in your order confirmation email.' => 'Nalazi se u e-mailu potvrde narudžbe.',
+'Email you used during checkout.' => 'E-mail adresa korištena tijekom naplate.',
+'Track' => 'Prati',
         ),
     ),
 ),
@@ -2460,6 +2621,14 @@ class HMPCv2_Woo_Presets {
                 'Nova lozinka (ostavite prazno ako ne želite da menjate)',
             'Confirm new password' => 'Potvrdite novu lozinku',
             'Save changes' => 'Sačuvaj izmene',
+            // Order tracking shortcode ([woocommerce_order_tracking]) — Serbian (sr)
+'To track your order please enter your Order ID in the box below and press the "Track" button. This was given to you on your receipt and in the confirmation email you should have received.' =>
+    'Da biste pratili svoju porudžbinu, unesite broj porudžbine u polje ispod i kliknite na dugme „Prati“. Broj se nalazi na vašem računu i u potvrdnom e-mailu koji ste primili.',
+'Order ID' => 'Broj porudžbine',
+'Billing email' => 'E-mail za naplatu',
+'Found in your order confirmation email.' => 'Nalazi se u e-mailu potvrde porudžbine.',
+'Email you used during checkout.' => 'E-mail adresa koju ste koristili tokom plaćanja.',
+'Track' => 'Prati',
         ),
     ),
 ),
@@ -2578,6 +2747,14 @@ class HMPCv2_Woo_Presets {
                 'Nova lozinka (ostavite prazno ako ne želite mijenjati)',
             'Confirm new password' => 'Potvrdite novu lozinku',
             'Save changes' => 'Sačuvaj promjene',
+            // Order tracking shortcode ([woocommerce_order_tracking]) — Bosnian (bs)
+'To track your order please enter your Order ID in the box below and press the "Track" button. This was given to you on your receipt and in the confirmation email you should have received.' =>
+    'Da biste pratili svoju narudžbu, unesite broj narudžbe u polje ispod i kliknite na dugme „Prati“. Broj se nalazi na vašem računu i u e-mailu za potvrdu koji ste primili.',
+'Order ID' => 'Broj narudžbe',
+'Billing email' => 'E-mail za naplatu',
+'Found in your order confirmation email.' => 'Nalazi se u e-mailu za potvrdu narudžbe.',
+'Email you used during checkout.' => 'E-mail adresa korištena tokom plaćanja.',
+'Track' => 'Prati',
         ),
     ),
 ),
@@ -2696,6 +2873,14 @@ class HMPCv2_Woo_Presets {
                 'Нова лозинка (оставете празно ако не сакате да ја менувате)',
             'Confirm new password' => 'Потврди нова лозинка',
             'Save changes' => 'Зачувај промени',
+            // Order tracking shortcode ([woocommerce_order_tracking]) — Macedonian (mk)
+'To track your order please enter your Order ID in the box below and press the "Track" button. This was given to you on your receipt and in the confirmation email you should have received.' =>
+    'За да ја следите вашата нарачка, внесете го бројот на нарачката во полето подолу и кликнете на копчето „Следи“. Ќе го најдете на вашата сметка и во е-поштата за потврда што сте ја добиле.',
+'Order ID' => 'Број на нарачка',
+'Billing email' => 'Е-пошта за наплата',
+'Found in your order confirmation email.' => 'Се наоѓа во е-поштата за потврда на нарачката.',
+'Email you used during checkout.' => 'Е-поштата што ја користевте при наплата.',
+'Track' => 'Следи',
         ),
     ),
 ),
@@ -2814,6 +2999,14 @@ class HMPCv2_Woo_Presets {
                 'Fjalëkalimi i ri (lëreni bosh nëse nuk doni ta ndryshoni)',
             'Confirm new password' => 'Konfirmo fjalëkalimin e ri',
             'Save changes' => 'Ruaj ndryshimet',
+            // Order tracking shortcode ([woocommerce_order_tracking]) — Albanian (sq)
+'To track your order please enter your Order ID in the box below and press the "Track" button. This was given to you on your receipt and in the confirmation email you should have received.' =>
+    'Për të gjurmuar porosinë tuaj, ju lutemi shkruani numrin e porosisë në fushën më poshtë dhe klikoni butonin “Gjurmo”. Numrin mund ta gjeni në faturën tuaj dhe në emailin e konfirmimit që keni marrë.',
+'Order ID' => 'Numri i porosisë',
+'Billing email' => 'Email për faturim',
+'Found in your order confirmation email.' => 'Gjendet në emailin e konfirmimit të porosisë.',
+'Email you used during checkout.' => 'Emaili që keni përdorur gjatë pagesës.',
+'Track' => 'Gjurmo',
         ),
     ),
 ),
@@ -2932,6 +3125,14 @@ class HMPCv2_Woo_Presets {
                 'Новий пароль (залиште порожнім, щоб не змінювати)',
             'Confirm new password' => 'Підтвердити новий пароль',
             'Save changes' => 'Зберегти зміни',
+            // Order tracking shortcode ([woocommerce_order_tracking]) — Ukrainian (uk)
+'To track your order please enter your Order ID in the box below and press the "Track" button. This was given to you on your receipt and in the confirmation email you should have received.' =>
+    'Щоб відстежити ваше замовлення, введіть номер замовлення в поле нижче та натисніть кнопку «Відстежити». Ви знайдете його у квитанції та в електронному листі з підтвердженням, який ви отримали.',
+'Order ID' => 'Номер замовлення',
+'Billing email' => 'Електронна пошта для виставлення рахунку',
+'Found in your order confirmation email.' => 'Міститься в електронному листі з підтвердженням замовлення.',
+'Email you used during checkout.' => 'Електронна адреса, використана під час оформлення замовлення.',
+'Track' => 'Відстежити',
         ),
     ),
 ),
@@ -3050,6 +3251,14 @@ class HMPCv2_Woo_Presets {
                 'Новый пароль (оставьте пустым, чтобы не менять)',
             'Confirm new password' => 'Подтвердите новый пароль',
             'Save changes' => 'Сохранить изменения',
+            // Order tracking shortcode ([woocommerce_order_tracking]) — Russian (ru)
+'To track your order please enter your Order ID in the box below and press the "Track" button. This was given to you on your receipt and in the confirmation email you should have received.' =>
+    'Чтобы отследить ваш заказ, введите номер заказа в поле ниже и нажмите кнопку «Отследить». Вы найдёте его в чеке и в письме с подтверждением, которое вы получили.',
+'Order ID' => 'Номер заказа',
+'Billing email' => 'Электронная почта для выставления счёта',
+'Found in your order confirmation email.' => 'Указано в письме с подтверждением заказа.',
+'Email you used during checkout.' => 'Электронный адрес, использованный при оформлении заказа.',
+'Track' => 'Отследить',
         ),
     ),
 ),
@@ -3168,6 +3377,14 @@ class HMPCv2_Woo_Presets {
                 'Новы пароль (пакіньце пустым, каб не змяняць)',
             'Confirm new password' => 'Пацвердзіць новы пароль',
             'Save changes' => 'Захаваць змены',
+            // Order tracking shortcode ([woocommerce_order_tracking]) — Belarusian (be)
+'To track your order please enter your Order ID in the box below and press the "Track" button. This was given to you on your receipt and in the confirmation email you should have received.' =>
+    'Каб адсачыць ваш заказ, увядзіце нумар замовы ў поле ніжэй і націсніце кнопку «Адсачыць». Вы знойдзеце яго ў квітанцыі і ў электронным лісце з пацвярджэннем, які вы атрымалі.',
+'Order ID' => 'Нумар замовы',
+'Billing email' => 'Электронная пошта для выстаўлення рахунку',
+'Found in your order confirmation email.' => 'Знаходзіцца ў электронным лісце з пацвярджэннем замовы.',
+'Email you used during checkout.' => 'Электронны адрас, выкарыстаны падчас афармлення замовы.',
+'Track' => 'Адсачыць',
         ),
     ),
 ),
@@ -3286,6 +3503,14 @@ class HMPCv2_Woo_Presets {
                 'Pasfhocal nua (fág bán mura mian leat é a athrú)',
             'Confirm new password' => 'Deimhnigh pasfhocal nua',
             'Save changes' => 'Sábháil athruithe',
+            // Order tracking shortcode ([woocommerce_order_tracking]) — Irish (ga)
+'To track your order please enter your Order ID in the box below and press the "Track" button. This was given to you on your receipt and in the confirmation email you should have received.' =>
+    'Chun d’ordú a rianú, cuir isteach uimhir d’ordaithe sa réimse thíos agus brúigh an cnaipe “Rianaigh”. Gheobhaidh tú í ar do admháil agus sa ríomhphost deimhnithe a fuair tú.',
+'Order ID' => 'Uimhir an ordaithe',
+'Billing email' => 'Ríomhphost billeála',
+'Found in your order confirmation email.' => 'Le fáil sa ríomhphost deimhnithe ordaithe.',
+'Email you used during checkout.' => 'An seoladh ríomhphoist a d’úsáid tú le linn an tseiceáil amach.',
+'Track' => 'Rianaigh',
         ),
     ),
 ),
@@ -3404,6 +3629,14 @@ class HMPCv2_Woo_Presets {
                 'Cyfrinair newydd (gadewch yn wag os nad ydych am ei newid)',
             'Confirm new password' => 'Cadarnhau cyfrinair newydd',
             'Save changes' => 'Cadw newidiadau',
+            // Order tracking shortcode ([woocommerce_order_tracking]) — Welsh (cy)
+'To track your order please enter your Order ID in the box below and press the "Track" button. This was given to you on your receipt and in the confirmation email you should have received.' =>
+    'I olrhain eich archeb, rhowch rif yr archeb yn y blwch isod a chliciwch y botwm “Olrhain”. Fe welwch ef ar eich derbynneb ac yn yr e-bost cadarnhau a gawsoch.',
+'Order ID' => 'Rhif yr archeb',
+'Billing email' => 'E-bost bilio',
+'Found in your order confirmation email.' => 'I’w weld yn yr e-bost cadarnhau archeb.',
+'Email you used during checkout.' => 'Y cyfeiriad e-bost a ddefnyddiwyd yn ystod y taliad.',
+'Track' => 'Olrhain',
         ),
     ),
 ),
@@ -3522,6 +3755,14 @@ class HMPCv2_Woo_Presets {
                 'Pasahitz berria (utzi hutsik ez aldatzeko)',
             'Confirm new password' => 'Berretsi pasahitz berria',
             'Save changes' => 'Aldaketak gorde',
+            // Order tracking shortcode ([woocommerce_order_tracking]) — Basque (eu)
+'To track your order please enter your Order ID in the box below and press the "Track" button. This was given to you on your receipt and in the confirmation email you should have received.' =>
+    'Zure eskaera jarraitzeko, sartu eskaera-zenbakia beheko eremuan eta egin klik “Jarraitu” botoian. Ordainagirian eta jaso duzun berrespen-mezu elektronikoan aurkituko duzu.',
+'Order ID' => 'Eskaera-zenbakia',
+'Billing email' => 'Fakturazio-helbide elektronikoa',
+'Found in your order confirmation email.' => 'Eskaeraren berrespen-mezu elektronikoan aurkitzen da.',
+'Email you used during checkout.' => 'Ordainketa egitean erabili zenuen helbide elektronikoa.',
+'Track' => 'Jarraitu',
         ),
     ),
 ),
@@ -3640,6 +3881,14 @@ class HMPCv2_Woo_Presets {
                 'Nova contrasenya (deixeu en blanc si no voleu canviar-la)',
             'Confirm new password' => 'Confirmar nova contrasenya',
             'Save changes' => 'Desar els canvis',
+            // Order tracking shortcode ([woocommerce_order_tracking]) — Catalan (ca)
+'To track your order please enter your Order ID in the box below and press the "Track" button. This was given to you on your receipt and in the confirmation email you should have received.' =>
+    'Per fer el seguiment de la teva comanda, introdueix el número de comanda al camp següent i fes clic al botó «Fer seguiment». El trobaràs al teu rebut i al correu electrònic de confirmació que has rebut.',
+'Order ID' => 'Número de comanda',
+'Billing email' => 'Correu electrònic de facturació',
+'Found in your order confirmation email.' => 'Es troba al correu electrònic de confirmació de la comanda.',
+'Email you used during checkout.' => 'Adreça de correu electrònic utilitzada durant el pagament.',
+'Track' => 'Fer seguiment',
         ),
     ),
 ),
@@ -3758,6 +4007,14 @@ class HMPCv2_Woo_Presets {
                 'Novo contrasinal (deixa en branco para non cambiar)',
             'Confirm new password' => 'Confirmar novo contrasinal',
             'Save changes' => 'Gardar cambios',
+            // Order tracking shortcode ([woocommerce_order_tracking]) — Galician (gl)
+'To track your order please enter your Order ID in the box below and press the "Track" button. This was given to you on your receipt and in the confirmation email you should have received.' =>
+    'Para facer o seguimento do teu pedido, introduce o número de pedido no campo inferior e preme o botón «Seguir». Atoparalo no teu recibo e no correo electrónico de confirmación que recibiches.',
+'Order ID' => 'Número de pedido',
+'Billing email' => 'Correo electrónico de facturación',
+'Found in your order confirmation email.' => 'Atópase no correo electrónico de confirmación do pedido.',
+'Email you used during checkout.' => 'Enderezo de correo electrónico usado durante o pagamento.',
+'Track' => 'Seguir',
         ),
     ),
 ),
@@ -3876,6 +4133,14 @@ class HMPCv2_Woo_Presets {
                 'Password ġdida (ħalli vojta jekk ma tridx tibdilha)',
             'Confirm new password' => 'Ikkonferma password ġdida',
             'Save changes' => 'Issejvja l-bidliet',
+            // Order tracking shortcode ([woocommerce_order_tracking]) — Maltese (mt)
+'To track your order please enter your Order ID in the box below and press the "Track" button. This was given to you on your receipt and in the confirmation email you should have received.' =>
+    'Biex issegwi l-ordni tiegħek, daħħal in-numru tal-ordni fil-qasam t’hawn taħt u agħfas il-buttuna “Segwi”. Tista’ ssibu fuq ir-riċevuta tiegħek u fl-imejl ta’ konferma li rċevejt.',
+'Order ID' => 'Numru tal-ordni',
+'Billing email' => 'Imejl tal-ibilljar',
+'Found in your order confirmation email.' => 'Jinsab fl-imejl ta’ konferma tal-ordni.',
+'Email you used during checkout.' => 'L-indirizz tal-imejl użat waqt il-ħlas.',
+'Track' => 'Segwi',
         ),
     ),
 ),
@@ -3994,6 +4259,14 @@ class HMPCv2_Woo_Presets {
                 'Neit Passwuert (eidel loossen, wann et net geännert soll ginn)',
             'Confirm new password' => 'Neit Passwuert bestätegen',
             'Save changes' => 'Ännerunge späicheren',
+            // Order tracking shortcode ([woocommerce_order_tracking]) — Luxembourgish (lb)
+'To track your order please enter your Order ID in the box below and press the "Track" button. This was given to you on your receipt and in the confirmation email you should have received.' =>
+    'Fir Är Bestellung ze verfollegen, gitt w.e.g. d’Bestellnummer an d’Feld hei drënner an a klickt op de Knäppchen „Verfollegen“. Dir fannt se op Ärer Quittung an an der Bestätegungs-E-Mail, déi Dir kritt hutt.',
+'Order ID' => 'Bestellnummer',
+'Billing email' => 'Rechnungs-E-Mail',
+'Found in your order confirmation email.' => 'An der Bestätegungs-E-Mail vun der Bestellung ze fannen.',
+'Email you used during checkout.' => 'D’E-Mail-Adress, déi Dir beim Bezuelen benotzt hutt.',
+'Track' => 'Verfollegen',
         ),
     ),
 ),
@@ -4112,6 +4385,14 @@ class HMPCv2_Woo_Presets {
                 'ახალი პაროლი (დატოვეთ ცარიელი თუ არ გსურთ შეცვლა)',
             'Confirm new password' => 'ახალი პაროლის დადასტურება',
             'Save changes' => 'ცვლილებების შენახვა',
+            // Order tracking shortcode ([woocommerce_order_tracking]) — Georgian (ka)
+'To track your order please enter your Order ID in the box below and press the "Track" button. This was given to you on your receipt and in the confirmation email you should have received.' =>
+    'თქვენი შეკვეთის თვალყურის დევნებისთვის შეიყვანეთ შეკვეთის ნომერი ქვემოთ მოცემულ ველში და დააჭირეთ ღილაკს „თვალყურის დევნება“. იგი მითითებულია თქვენს ქვითარსა და დადასტურების ელფოსტაში, რომელიც უნდა მიგეღოთ.',
+'Order ID' => 'შეკვეთის ნომერი',
+'Billing email' => 'ბილინგის ელფოსტა',
+'Found in your order confirmation email.' => 'ნაპოვნია შეკვეთის დადასტურების ელფოსტაში.',
+'Email you used during checkout.' => 'ელფოსტა, რომელიც გამოიყენეთ გადახდისას.',
+'Track' => 'თვალყურის დევნება',
         ),
     ),
 ),
@@ -4230,6 +4511,14 @@ class HMPCv2_Woo_Presets {
                 'Նոր գաղտնաբառ (թողնել դատարկ՝ չփոխելու համար)',
             'Confirm new password' => 'Հաստատել նոր գաղտնաբառը',
             'Save changes' => 'Պահպանել փոփոխությունները',
+            // Order tracking shortcode ([woocommerce_order_tracking]) — Armenian (hy)
+'To track your order please enter your Order ID in the box below and press the "Track" button. This was given to you on your receipt and in the confirmation email you should have received.' =>
+    'Ձեր պատվերը հետևելու համար մուտքագրեք պատվերի համարը ստորև նշված դաշտում և սեղմեք «Հետևել» կոճակը։ Այն գտնվում է ձեր կտրոնում և հաստատման էլ․ նամակում, որը դուք ստացել եք։',
+'Order ID' => 'Պատվերի համար',
+'Billing email' => 'Հաշվարկման էլ․ փոստ',
+'Found in your order confirmation email.' => 'Գտնվում է պատվերի հաստատման էլ․ նամակում։',
+'Email you used during checkout.' => 'Էլ․ փոստի հասցեն, որն օգտագործել եք վճարման ժամանակ։',
+'Track' => 'Հետևել',
         ),
     ),
 ),
@@ -4348,6 +4637,14 @@ class HMPCv2_Woo_Presets {
                 'Yeni şifrə (dəyişməmək üçün boş buraxın)',
             'Confirm new password' => 'Yeni şifrəni təsdiqlə',
             'Save changes' => 'Dəyişiklikləri saxla',
+            // Order tracking shortcode ([woocommerce_order_tracking]) — Azerbaijani (az)
+'To track your order please enter your Order ID in the box below and press the "Track" button. This was given to you on your receipt and in the confirmation email you should have received.' =>
+    'Sifarişinizi izləmək üçün aşağıdakı sahəyə sifariş nömrəsini daxil edin və “İzlə” düyməsini basın. Bu məlumat qəbzinizdə və aldığınız təsdiq e-poçtunda göstərilmişdir.',
+'Order ID' => 'Sifariş nömrəsi',
+'Billing email' => 'Hesablaşma e-poçtu',
+'Found in your order confirmation email.' => 'Sifariş təsdiqi e-poçtunda göstərilib.',
+'Email you used during checkout.' => 'Ödəniş zamanı istifadə etdiyiniz e-poçt ünvanı.',
+'Track' => 'İzlə',
         ),
     ),
 ),
@@ -4466,6 +4763,14 @@ class HMPCv2_Woo_Presets {
                 'كلمة المرور الجديدة (اتركه فارغاً لعدم التغيير)',
             'Confirm new password' => 'تأكيد كلمة المرور الجديدة',
             'Save changes' => 'حفظ التغييرات',
+            // Order tracking shortcode ([woocommerce_order_tracking]) — Arabic (ar)
+'To track your order please enter your Order ID in the box below and press the "Track" button. This was given to you on your receipt and in the confirmation email you should have received.' =>
+    'لتتبع طلبك، يرجى إدخال رقم الطلب في الحقل أدناه ثم الضغط على زر «تتبع». ستجده في إيصالك وفي رسالة التأكيد الإلكترونية التي من المفترض أنك استلمتها.',
+'Order ID' => 'رقم الطلب',
+'Billing email' => 'البريد الإلكتروني للفوترة',
+'Found in your order confirmation email.' => 'موجود في رسالة تأكيد الطلب الإلكترونية.',
+'Email you used during checkout.' => 'البريد الإلكتروني الذي استخدمته أثناء إتمام الشراء.',
+'Track' => 'تتبع',
         ),
     ),
 ),
@@ -4584,6 +4889,14 @@ class HMPCv2_Woo_Presets {
                 'رمز عبور جدید (برای عدم تغییر خالی بگذارید)',
             'Confirm new password' => 'تأیید رمز عبور جدید',
             'Save changes' => 'ذخیره تغییرات',
+            // Order tracking shortcode ([woocommerce_order_tracking]) — Persian (fa)
+'To track your order please enter your Order ID in the box below and press the "Track" button. This was given to you on your receipt and in the confirmation email you should have received.' =>
+    'برای پیگیری سفارش خود، لطفاً شماره سفارش را در کادر زیر وارد کرده و روی دکمه «پیگیری» کلیک کنید. این شماره در رسید شما و در ایمیل تأییدی که دریافت کرده‌اید موجود است.',
+'Order ID' => 'شماره سفارش',
+'Billing email' => 'ایمیل صورتحساب',
+'Found in your order confirmation email.' => 'در ایمیل تأیید سفارش موجود است.',
+'Email you used during checkout.' => 'ایمیلی که هنگام پرداخت استفاده کرده‌اید.',
+'Track' => 'پیگیری',
         ),
     ),
 ),
@@ -4702,6 +5015,14 @@ class HMPCv2_Woo_Presets {
                 'Şîfreya nû (vala bihêle ku neyê guhertin)',
             'Confirm new password' => 'Şîfreya nû bipejirîne',
             'Save changes' => 'Guhertinan tomar bike',
+            // Order tracking shortcode ([woocommerce_order_tracking]) — Kurdish (Kurmanji) (ku)
+'To track your order please enter your Order ID in the box below and press the "Track" button. This was given to you on your receipt and in the confirmation email you should have received.' =>
+    'Ji bo şopandina fermanê xwe, ji kerema xwe re hejmare fermanê li qada jêrîn binivîse û bişkojka «Şopandin» bikirtîne. Ev agahî li ser wergirtina te û di e-nameya pejirandinê ya ku te wergirtî de tê dîtin.',
+'Order ID' => 'Hejmara fermanê',
+'Billing email' => 'E-nameya firotanê',
+'Found in your order confirmation email.' => 'Di e-nameya pejirandinê ya fermanê de tê dîtin.',
+'Email you used during checkout.' => 'E-nameya ku di dema dayîna dravê de bikar anî.',
+'Track' => 'Şopandin',
         ),
     ),
 ),
@@ -4820,6 +5141,14 @@ class HMPCv2_Woo_Presets {
                 '新密码（留空则不更改）',
             'Confirm new password' => '确认新密码',
             'Save changes' => '保存更改',
+            // Order tracking shortcode ([woocommerce_order_tracking]) — Chinese (Simplified) (zh)
+'To track your order please enter your Order ID in the box below and press the "Track" button. This was given to you on your receipt and in the confirmation email you should have received.' =>
+    '要跟踪您的订单，请在下方输入订单号并点击“跟踪”按钮。您可以在收据以及您收到的确认电子邮件中找到该信息。',
+'Order ID' => '订单号',
+'Billing email' => '账单邮箱',
+'Found in your order confirmation email.' => '可在订单确认电子邮件中找到。',
+'Email you used during checkout.' => '结账时使用的电子邮箱。',
+'Track' => '跟踪',
         ),
     ),
 ),
@@ -4938,6 +5267,14 @@ class HMPCv2_Woo_Presets {
                 'Nuova password (lascia vuoto per non modificarla)',
             'Confirm new password' => 'Conferma nuova password',
             'Save changes' => 'Salva modifiche',
+            // Order tracking shortcode ([woocommerce_order_tracking]) — Italian (it)
+'To track your order please enter your Order ID in the box below and press the "Track" button. This was given to you on your receipt and in the confirmation email you should have received.' =>
+    'Per tracciare il tuo ordine, inserisci il numero dell’ordine nel campo sottostante e fai clic sul pulsante «Traccia». Lo troverai sulla ricevuta e nell’e-mail di conferma che hai ricevuto.',
+'Order ID' => 'Numero ordine',
+'Billing email' => 'E-mail di fatturazione',
+'Found in your order confirmation email.' => 'Si trova nell’e-mail di conferma dell’ordine.',
+'Email you used during checkout.' => 'Indirizzo e-mail utilizzato durante il pagamento.',
+'Track' => 'Traccia',
         ),
     ),
 ),
@@ -5059,6 +5396,14 @@ class HMPCv2_Woo_Presets {
                             'Parola nouă (lasă gol pentru a nu o schimba)',
                         'Confirm new password' => 'Confirmă noua parolă',
                         'Save changes' => 'Salvează modificările',
+                        // Order tracking shortcode ([woocommerce_order_tracking]) — Romanian (ro)
+'To track your order please enter your Order ID in the box below and press the "Track" button. This was given to you on your receipt and in the confirmation email you should have received.' =>
+    'Pentru a urmări comanda ta, introdu numărul comenzii în câmpul de mai jos și apasă butonul „Urmărește”. Îl vei găsi pe chitanță și în e-mailul de confirmare pe care l-ai primit.',
+'Order ID' => 'Număr comandă',
+'Billing email' => 'E-mail de facturare',
+'Found in your order confirmation email.' => 'Se găsește în e-mailul de confirmare a comenzii.',
+'Email you used during checkout.' => 'Adresa de e-mail utilizată în timpul plății.',
+'Track' => 'Urmărește',
                     ),
                 ),
             ),
@@ -5177,6 +5522,14 @@ class HMPCv2_Woo_Presets {
                 'Nouveau mot de passe (laisser vide pour ne pas le modifier)',
             'Confirm new password' => 'Confirmer le nouveau mot de passe',
             'Save changes' => 'Enregistrer les modifications',
+            // Order tracking shortcode ([woocommerce_order_tracking]) — French (fr)
+'To track your order please enter your Order ID in the box below and press the "Track" button. This was given to you on your receipt and in the confirmation email you should have received.' =>
+    'Pour suivre votre commande, veuillez saisir votre numéro de commande dans le champ ci-dessous et cliquer sur le bouton « Suivre ». Vous le trouverez sur votre reçu et dans l’e-mail de confirmation que vous avez reçu.',
+'Order ID' => 'Numéro de commande',
+'Billing email' => 'E-mail de facturation',
+'Found in your order confirmation email.' => 'Indiqué dans l’e-mail de confirmation de votre commande.',
+'Email you used during checkout.' => 'Adresse e-mail utilisée lors du paiement.',
+'Track' => 'Suivre',
         ),
     ),
 ),
