@@ -429,15 +429,25 @@ final class HMPCv2_Woo {
 		return '';
 	}
 
-	private static function checkout_fields_get($lang, $key): string {
+	private static function checkout_fields_get($lang, $key) {
 		$key = (string) $key;
 		$v = self::woo_domain_get($lang, 'checkout_fields', $key);
-		if ($v !== '') {
-			return $v;
+		if ($v !== '') return $v;
+
+		// fallback defaults (prevents empty dict keys from skipping label override)
+		static $defs = null;
+		if ($defs === null) {
+			$defs = array(
+				'billing_city_label'     => 'Town / City',
+				'billing_state_label'    => 'State / County',
+				'billing_postcode_label' => 'Postcode / ZIP',
+				'billing_phone_label'    => 'Phone',
+				'billing_company_label'  => 'Company name (optional)',
+				'order_comments_label'   => 'Order notes (optional)',
+				'coupon_notice_text'     => 'Have a coupon? Click here to enter your code.',
+			);
 		}
 
-		// fallback to safe defaults when dict isn't seeded yet
-		$defs = self::checkout_fields_defaults();
 		return isset($defs[$key]) ? (string) $defs[$key] : '';
 	}
 
@@ -1045,18 +1055,3 @@ final class HMPCv2_Woo {
 		return $rebuilt;
 	}
 }
-	/**
-	 * Defaults for Woo Strings domains (used when dict is not seeded yet).
-	 * IMPORTANT: keep this aligned with Admin "Checkout – Fields (Labels)" domain.
-	 */
-	private static function checkout_fields_defaults(): array {
-		return array(
-			'billing_city_label'     => 'Town / City',
-			'billing_state_label'    => 'State / County',
-			'billing_postcode_label' => 'Postcode / ZIP',
-			'billing_phone_label'    => 'Phone',
-			'billing_company_label'  => 'Company name (optional)',
-			'order_comments_label'   => 'Order notes (optional)',
-			'coupon_notice_text'     => 'Have a coupon? Click here to enter your code.',
-		);
-	}
