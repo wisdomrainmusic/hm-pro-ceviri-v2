@@ -103,6 +103,127 @@ class HMPCv2_Woo_Presets {
                     ),
                 ),
             ),
+
+            /* ================================
+             * RO — Romanian (seeded from EN)
+             * ================================ */
+
+            'ro' => array(
+                'label' => 'RO — Romanian (seeded from EN)',
+                'domains' => array(
+                    'woocommerce' => array(
+                        'Shopping cart' => 'Coș de cumpărături',
+                        'Shopping Cart' => 'Coș de cumpărături',
+                        'View cart' => 'Vezi coșul',
+                        'Subtotal:' => 'Subtotal:',
+
+                        'Cart totals' => 'Total coș',
+                        'Cart Total Test' => 'Test total coș',
+
+                        'Apply coupon' => 'Aplică cupon',
+                        'APPLY TEST' => 'APLICĂ TEST',
+
+                        'Cart' => 'Coș',
+                        'Coupon code' => 'Cod cupon',
+                        'Update cart' => 'Actualizează coșul',
+                        'Proceed to checkout' => 'Finalizează comanda',
+                        'Subtotal' => 'Subtotal',
+                        'Shipping' => 'Livrare',
+                        'Total' => 'Total',
+
+                        'Product' => 'Produs',
+                        'Price' => 'Preț',
+                        'Quantity' => 'Cantitate',
+                        'Remove this item' => 'Elimină acest produs',
+
+                        'Your cart is currently empty.' => 'Coșul tău este gol.',
+                        'Return to shop' => 'Înapoi la magazin',
+
+                        'Checkout' => 'Finalizare comandă',
+                        'Billing details' => 'Detalii de facturare',
+                        'Additional information' => 'Informații suplimentare',
+                        'Your order' => 'Comanda ta',
+                        'Place order' => 'Plasează comanda',
+
+                        'Apply' => 'Aplică',
+                        'Privacy policy' => 'Politica de confidențialitate',
+
+                        'My account' => 'Contul meu',
+                        'Dashboard' => 'Panou de control',
+                        'Orders' => 'Comenzi',
+                        'Downloads' => 'Descărcări',
+                        'Addresses' => 'Adrese',
+                        'Account details' => 'Detalii cont',
+                        'Logout' => 'Deconectare',
+                        'Log out' => 'Deconectare',
+
+                        'Hello %1$s (not %1$s? Log out)' => 'Salut %1$s (nu ești %1$s? Deconectare)',
+                        'Hello %1$s (not %2$s? Log out)' => 'Salut %1$s (nu ești %2$s? Deconectare)',
+
+                        'From your account dashboard you can view your recent orders, manage your shipping and billing addresses, and edit your password and account details.' =>
+                            'Din panoul contului poți vedea comenzile recente, poți gestiona adresele de livrare și facturare și îți poți modifica parola și detaliile contului.',
+
+                        'No order has been made yet.' => 'Încă nu a fost plasată nicio comandă.',
+                        'Browse products' => 'Răsfoiește produsele',
+
+                        'Free shipping' => 'Livrare gratuită',
+                        'Shipping to %s.' => 'Livrare către %s.',
+                        'Change address' => 'Schimbă adresa',
+
+                        'Have a coupon? Click here to enter your code.' =>
+                            'Ai un cupon? Click aici pentru a introduce codul.',
+
+                        'Direct bank transfer' => 'Transfer bancar direct',
+
+                        'Make your payment directly into our bank account. Please use your Order ID as the payment reference. Your order will not be shipped until the funds have cleared in our (account).' =>
+                            'Efectuează plata direct în contul nostru bancar. Folosește ID-ul comenzii ca referință de plată. Comanda nu va fi expediată până când fondurile nu vor fi confirmate în contul nostru.',
+
+                        'Your personal data will be used to process your order, support your experience throughout this website, and for other purposes described in our privacy policy.' =>
+                            'Datele tale personale vor fi folosite pentru a procesa comanda, pentru a susține experiența ta pe acest site și pentru alte scopuri descrise în politica noastră de confidențialitate.',
+
+                        'Company name (optional)' => 'Nume companie (opțional)',
+                        'Country / Region' => 'Țară / Regiune',
+                        'Turkey' => 'Turcia',
+                        'Street address' => 'Adresă',
+                        'House number and street name' => 'Număr și stradă',
+                        'Apartment, suite, unit, etc. (optional)' => 'Apartament, suită, unitate etc. (opțional)',
+                        'Postcode / ZIP' => 'Cod poștal',
+                        'Town / City' => 'Oraș',
+                        'Phone' => 'Telefon',
+                        'Email address' => 'Adresă de e-mail',
+                        'Ship to a different address?' => 'Livrează la o adresă diferită?',
+                        'Order notes (optional)' => 'Note comandă (opțional)',
+                        'Notes about your order, e.g. special notes for delivery.' =>
+                            'Note despre comanda ta, de ex. instrucțiuni speciale pentru livrare.',
+
+                        'No downloads available yet.' => 'Încă nu există descărcări disponibile.',
+
+                        'The following addresses will be used on the checkout page by default.' =>
+                            'Următoarele adrese vor fi folosite implicit la finalizarea comenzii.',
+
+                        'Billing address' => 'Adresă de facturare',
+                        'Shipping address' => 'Adresă de livrare',
+                        'Add billing address' => 'Adaugă adresă de facturare',
+                        'Add shipping address' => 'Adaugă adresă de livrare',
+                        'You have not set up this type of address yet.' =>
+                            'Încă nu ai configurat acest tip de adresă.',
+
+                        'First name' => 'Prenume',
+                        'Last name' => 'Nume',
+                        'Display name' => 'Nume afișat',
+                        'Display name is how your name will be displayed in the account section and in reviews' =>
+                            'Numele afișat este numele care va apărea în secțiunea contului și în recenzii.',
+
+                        'Password change' => 'Schimbare parolă',
+                        'Current password (leave blank to leave unchanged)' =>
+                            'Parola curentă (lasă gol pentru a nu o schimba)',
+                        'New password (leave blank to leave unchanged)' =>
+                            'Parola nouă (lasă gol pentru a nu o schimba)',
+                        'Confirm new password' => 'Confirmă noua parolă',
+                        'Save changes' => 'Salvează modificările',
+                    ),
+                ),
+            ),
             'woo_cart' => array(
                 'label' => 'Woo Core – Cart',
                 'domains' => array(
