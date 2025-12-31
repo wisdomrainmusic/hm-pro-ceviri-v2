@@ -39,6 +39,10 @@ final class HMPCv2_Woo {
 		add_filter('gettext', array(__CLASS__, 'woo_gettext_override'), 10, 3);
 		add_filter('gettext_with_context', array(__CLASS__, 'woo_gettext_with_context_override'), 10, 4);
 
+		// Add-to-cart notice (some themes output final HTML and bypass gettext)
+		add_filter('wc_add_to_cart_message_html', array(__CLASS__, 'filter_add_to_cart_message_html'), 20, 3);
+		add_filter('woocommerce_add_to_cart_message_html', array(__CLASS__, 'filter_add_to_cart_message_html'), 20, 3);
+
 		// My Account menu item labels (Addresses etc.)
 		add_filter('woocommerce_account_menu_items', array(__CLASS__, 'filter_myaccount_menu_items'), 20, 1);
 
@@ -503,6 +507,83 @@ final class HMPCv2_Woo {
 
                 return '';
         }
+
+	/**
+	 * Translate add-to-cart notice HTML when theme bypasses gettext.
+	 * Expected fragments:
+	 *   “%s” sepetinize eklendi.
+	 *   "%s" sepetinize eklendi.
+	 *   %s sepetinize eklendi.
+	 */
+	public static function filter_add_to_cart_message_html($message, $products = array(), $show_qty = false) {
+		if (is_admin()) return $message;
+
+		$lang = self::current_lang_code();
+		if ($lang === '') return $message;
+
+		$default = HMPCv2_Langs::default_lang();
+		if ($lang === $default) return $message;
+
+		// If it doesn't look like the Turkish template, skip (avoid breaking other locales)
+		if (stripos($message, 'sepetinize eklendi') === false) return $message;
+
+		// Candidate originals (these are what you can add in Woo Strings > domain: woocommerce)
+		$orig_candidates = array(
+			'“%s” sepetinize eklendi.',
+			'"%s" sepetinize eklendi.',
+			'%s sepetinize eklendi.',
+		);
+
+		// Default fallback (EN)
+		$fallback_tpl = '"%s" has been added to your cart.';
+		$tpl = '';
+
+		// Try dictionary lookups (domain key is "woocommerce" for Woo gettext strings)
+		$dict = self::woo_dict();
+		foreach ($orig_candidates as $orig) {
+			$key = self::dict_key_simple($orig);
+			if (isset($dict[$lang]['woocommerce'][$key]) && (string) $dict[$lang]['woocommerce'][$key] !== '') {
+				$tpl = (string) $dict[$lang]['woocommerce'][$key];
+				break;
+			}
+			// EN master fallback for non-default languages
+			if ($tpl === '' && isset($dict['en']['woocommerce'][$key]) && (string) $dict['en']['woocommerce'][$key] !== '') {
+				$tpl = (string) $dict['en']['woocommerce'][$key];
+				// keep searching for direct lang match; but we already have an EN fallback
+			}
+		}
+		if ($tpl === '') $tpl = $fallback_tpl;
+
+		// Replace the quoted product part: “NAME” sepetinize eklendi.
+		// Keep existing HTML (e.g., View cart button) intact.
+		$patterns = array(
+			// smart quotes
+			'/“([^”]+)”\s*sepetinize eklendi\./u',
+			// normal quotes
+			'/"([^"]+)"\s*sepetinize eklendi\./u',
+		);
+
+		foreach ($patterns as $pat) {
+			if (preg_match($pat, $message, $m)) {
+				$name = isset($m[1]) ? (string) $m[1] : '';
+				$replacement = sprintf($tpl, $name);
+				$message = preg_replace($pat, $replacement, $message, 1);
+				return $message;
+			}
+		}
+
+		// Unquoted fallback: NAME sepetinize eklendi.
+		// Try to replace only the last occurrence to reduce risk.
+		if (preg_match('/([^<>]{2,200})\s*sepetinize eklendi\./u', $message, $m)) {
+			$name = trim((string) $m[1]);
+			if ($name !== '' && mb_stripos($name, 'View cart') === false) {
+				$replacement = sprintf($tpl, $name);
+				$message = preg_replace('/' . preg_quote($name, '/') . '\s*sepetinize eklendi\./u', $replacement, $message, 1);
+			}
+		}
+
+		return $message;
+	}
 
 	private static function dict_key_simple(string $text): string {
 		return 's:' . $text;
