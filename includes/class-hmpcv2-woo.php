@@ -534,6 +534,9 @@ final class HMPCv2_Woo {
 
 		echo '<p style="margin-top:0;">Single product, multi-language texts (no duplication). Stock/price/variations stay the same.</p>';
 
+		// Product tags attached to this product (used for per-language tag name mapping)
+		$tag_terms = get_the_terms($post->ID, 'product_tag');
+		if (!is_array($tag_terms)) $tag_terms = array();
 		foreach ($enabled as $code) {
 			if ($code === $default) continue; // Default language already uses WP native fields
 
@@ -588,6 +591,22 @@ final class HMPCv2_Woo {
 			echo '</div>';
 
 			echo '</div>';
+
+			// Product tags (term translation map)
+			echo '<p style="margin:14px 0 6px;font-weight:600;">Product tags (optional)</p>';
+			echo '<p style="margin:0 0 8px;color:#666;">Translate tag names for this product. One per line: Original=Translated. Tip: you can also use TermID=Translated for perfect matching.</p>';
+
+			$tag_lines = '';
+			if (!empty($tag_terms)) {
+				foreach ($tag_terms as $t) {
+					if (!($t instanceof WP_Term)) continue;
+					$orig = (string)$t->name;
+					$tr_name = self::get_term_translation_name((int)$t->term_id, (string)$code);
+					$tag_lines .= $orig . '=' . $tr_name . "\n";
+				}
+			}
+			echo '<textarea style="width:100%;min-height:110px;" name="hmpcv2_prod[' . esc_attr($code) . '][tag_map]">' . esc_textarea($tag_lines) . '</textarea>';
+			echo '<div style="font-size:12px;color:#666;">One per line: Original=Translated (or TermID=Translated)</div>';
 		}
 
 		echo '<hr style="margin:16px 0;">';
@@ -607,6 +626,15 @@ final class HMPCv2_Woo {
 
 		$all = isset($_POST['hmpcv2_prod']) && is_array($_POST['hmpcv2_prod']) ? $_POST['hmpcv2_prod'] : array();
 
+		// Product tags currently attached to this product (used to resolve OriginalName -> term_id)
+		$tag_terms = get_the_terms($post_id, 'product_tag');
+		if (!is_array($tag_terms)) $tag_terms = array();
+		$tag_ids_by_name = array();
+		foreach ($tag_terms as $t) {
+			if (!($t instanceof WP_Term)) continue;
+			$tag_ids_by_name[strtolower((string)$t->name)] = (int)$t->term_id;
+		}
+
 		foreach ($enabled as $code) {
 			if ($code === $default) continue;
 
@@ -622,10 +650,61 @@ final class HMPCv2_Woo {
 
 			$labels_map = self::parse_map(isset($block['attr_labels']) ? (string)$block['attr_labels'] : '');
 			$values_map = self::parse_map(isset($block['attr_values']) ? (string)$block['attr_values'] : '');
+			$tag_map    = self::parse_map(isset($block['tag_map']) ? (string)$block['tag_map'] : '');
 
 			update_post_meta($post_id, self::k($code, 'attr_labels'), $labels_map);
 			update_post_meta($post_id, self::k($code, 'attr_values'), $values_map);
+
+			// Persist tag name translations into the global term translations store
+			if (!empty($tag_map)) {
+				foreach ($tag_map as $orig_key => $translated_name) {
+					$translated_name = sanitize_text_field((string)$translated_name);
+					if ($translated_name === '') continue;
+
+					$term_id = 0;
+					if (is_numeric($orig_key)) {
+						$term_id = (int)$orig_key;
+					} else {
+						$k = strtolower((string)$orig_key);
+						if (isset($tag_ids_by_name[$k])) $term_id = (int)$tag_ids_by_name[$k];
+					}
+
+					if ($term_id > 0) {
+						self::merge_term_translation_name($term_id, (string)$code, $translated_name);
+					}
+				}
+			}
 		}
+	}
+
+	private static function get_term_translation_name(int $term_id, string $lang): string {
+		if ($term_id < 1) return '';
+		$lang = HMPCv2_Langs::sanitize_lang_code($lang, '');
+		if ($lang === '') return '';
+
+		if (!class_exists('HMPCv2_Options')) return '';
+		$all = HMPCv2_Options::get_term_translations();
+		if (!isset($all[$term_id]) || !is_array($all[$term_id])) return '';
+		if (!isset($all[$term_id][$lang]) || !is_array($all[$term_id][$lang])) return '';
+		$v = isset($all[$term_id][$lang]['name']) ? (string)$all[$term_id][$lang]['name'] : '';
+		return trim($v);
+	}
+
+	private static function merge_term_translation_name(int $term_id, string $lang, string $name): bool {
+		$term_id = (int)$term_id;
+		$lang = HMPCv2_Langs::sanitize_lang_code($lang, '');
+		$name = sanitize_text_field((string)$name);
+		if ($term_id < 1 || $lang === '' || $name === '') return false;
+
+		if (!class_exists('HMPCv2_Options')) return false;
+		$all = HMPCv2_Options::get_term_translations();
+		$existing = array();
+		if (isset($all[$term_id]) && is_array($all[$term_id]) && isset($all[$term_id][$lang]) && is_array($all[$term_id][$lang])) {
+			$existing = $all[$term_id][$lang];
+		}
+
+		$data = array_merge($existing, array('name' => $name));
+		return (bool) HMPCv2_Options::save_term_translation($term_id, $lang, $data);
 	}
 
 	private static function parse_map($text) {
