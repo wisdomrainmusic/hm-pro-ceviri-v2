@@ -145,9 +145,17 @@ final class HMPCv2_Resolver {
             $new_path .= '/';
         }
 
-        // For default language root ("/"), bypass home_url() filter.
-        if ($target_lang === $default && !$prefix_default && $is_root) {
-            return self::raw_home_url('/') . $query;
+        /**
+         * IMPORTANT: When switching to the default language while the default language
+         * is NOT prefixed (e.g. TR lives at "/"), we MUST bypass home_url() because
+         * HMPCv2_Router filters home_url() to keep the current language prefix.
+         *
+         * Symptom: From /en/... you can go to /de or /fr, but clicking TR appears to do
+         * nothing because the generated unprefixed path is passed through home_url(),
+         * which gets re-prefixed back to the current language (cookie/URI).
+         */
+        if ($target_lang === $default && !$prefix_default) {
+            return self::raw_home_url($new_path) . $query;
         }
 
         return home_url($new_path) . $query;
