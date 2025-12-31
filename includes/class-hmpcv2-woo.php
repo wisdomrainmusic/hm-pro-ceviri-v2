@@ -566,6 +566,19 @@ final class HMPCv2_Woo {
 		foreach ($patterns as $pat) {
 			if (preg_match($pat, $message, $m)) {
 				$name = isset($m[1]) ? (string) $m[1] : '';
+
+				// Normalize product name: remove wrapping quotes and unescape slashes
+				$name = trim($name);
+				// Turn \" into "
+				if (strpos($name, '\\') !== false) {
+					$name = stripslashes($name);
+				}
+				// Remove wrapping quotes if still present
+				$name = preg_replace('/^[\'"]+|[\'"]+$/u', '', $name);
+				// Remove wrapping smart quotes if any
+				$name = preg_replace('/^[“”]+|[“”]+$/u', '', $name);
+				$name = trim($name);
+
 				$replacement = sprintf($tpl, $name);
 				$message = preg_replace($pat, $replacement, $message, 1);
 				return $message;
