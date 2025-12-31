@@ -904,6 +904,9 @@ final class HMPCv2_Woo {
 		if ($lang === '') return $translation;
 		if (is_admin()) return $translation;
 
+		$default = HMPCv2_Langs::default_lang();
+		$is_woo_domain = in_array($domain, array('woocommerce', 'woocommerce-blocks'), true);
+
 		$dict = self::woo_dict();
 		$key = self::dict_key_simple((string) $text);
 
@@ -912,8 +915,14 @@ final class HMPCv2_Woo {
 			if ($t !== '') return $t;
 		}
 
-		// EN master fallback for Woo domains (prevents Turkish leaks)
-		if ($lang === 'en' && in_array($domain, array('woocommerce', 'woocommerce-blocks'), true)) {
+		// Non-default language: prevent default-language (TR) leaks inside Woo gettext
+		if ($is_woo_domain && $lang !== $default) {
+			// 1) EN master fallback if available
+			if (isset($dict['en'][$domain][$key])) {
+				$t = (string) $dict['en'][$domain][$key];
+				if ($t !== '') return $t;
+			}
+			// 2) Otherwise return the source string instead of default locale translation
 			return $text;
 		}
 
@@ -928,6 +937,9 @@ final class HMPCv2_Woo {
 		if ($lang === '') return $translation;
 		if (is_admin()) return $translation;
 
+		$default = HMPCv2_Langs::default_lang();
+		$is_woo_domain = in_array($domain, array('woocommerce', 'woocommerce-blocks'), true);
+
 		$dict = self::woo_dict();
 		$key = self::dict_key_context((string) $context, (string) $text);
 
@@ -936,8 +948,12 @@ final class HMPCv2_Woo {
 			if ($t !== '') return $t;
 		}
 
-		// EN master fallback for contextual gettext too.
-		if ($lang === 'en' && in_array($domain, array('woocommerce', 'woocommerce-blocks'), true)) {
+		// Non-default language: prevent default-language (TR) leaks inside Woo gettext
+		if ($is_woo_domain && $lang !== $default) {
+			if (isset($dict['en'][$domain][$key])) {
+				$t = (string) $dict['en'][$domain][$key];
+				if ($t !== '') return $t;
+			}
 			return $text;
 		}
 

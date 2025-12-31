@@ -13,6 +13,10 @@ class HMPCv2_Woo_Presets {
                 'label' => 'DE — German (seeded from EN)',
                 'domains' => array(
                     'woocommerce' => array(
+                        'Shopping cart' => 'Warenkorb',
+                        'Shopping Cart' => 'Warenkorb',
+                        'View cart' => 'Warenkorb ansehen',
+                        'Subtotal:' => 'Zwischensumme:',
                         'Cart totals' => 'Warenkorb-Summen',
                         'Cart Total Test' => 'Warenkorb-Summen Test',
                         'Apply coupon' => 'Gutschein anwenden',
