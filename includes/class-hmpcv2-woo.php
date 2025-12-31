@@ -27,6 +27,8 @@ final class HMPCv2_Woo {
 		add_filter('woocommerce_display_product_attributes', array(__CLASS__, 'filter_display_attributes'), 20, 2);
 		// Translate variation option names (e.g., "34 beden" -> "Size 34")
 		add_filter('woocommerce_variation_option_name', array(__CLASS__, 'filter_variation_option_name'), 20, 4);
+		// Translate variation options HTML (covers swatches plugins like CFVSW)
+		add_filter('woocommerce_dropdown_variation_attribute_options_html', array(__CLASS__, 'filter_variation_attribute_options_html'), 99, 2);
 
 		// Woo core gettext overrides
 		add_filter('gettext', array(__CLASS__, 'woo_gettext_override'), 10, 3);
@@ -884,6 +886,74 @@ final class HMPCv2_Woo {
 		}
 
 		return $term_name;
+	}
+
+	public static function filter_variation_attribute_options_html($html, $args) {
+		if (is_admin()) return $html;
+
+		// Only on single product pages
+		if (function_exists('is_product')) {
+			if (!is_product()) return $html;
+		} else {
+			if (!is_singular('product')) return $html;
+		}
+
+		$lang = self::current_lang_non_default();
+		if ($lang === '') return $html;
+
+		// Resolve product id
+		$product_id = 0;
+		if (!empty($args['product']) && is_object($args['product']) && method_exists($args['product'], 'get_id')) {
+			$product_id = (int) $args['product']->get_id();
+		} else {
+			$qo = function_exists('get_queried_object_id') ? (int) get_queried_object_id() : 0;
+			if ($qo > 0) $product_id = $qo;
+		}
+
+		if ($product_id <= 0) return $html;
+
+		$labels_map = get_post_meta($product_id, self::k($lang, 'attr_labels'), true);
+		if (!is_array($labels_map)) $labels_map = array();
+
+		$values_map = get_post_meta($product_id, self::k($lang, 'attr_values'), true);
+		if (!is_array($values_map)) $values_map = array();
+
+		// Replace values first (e.g., "34 beden" -> "Size 34")
+		if (!empty($values_map)) {
+			// Longer keys first to avoid partial collisions
+			uksort($values_map, function($a, $b) {
+				return strlen((string) $b) <=> strlen((string) $a);
+			});
+
+			foreach ($values_map as $from => $to) {
+				if (!is_string($from) || $from === '') continue;
+				if (!is_string($to)) $to = (string) $to;
+
+				// Replace in text nodes + data-title="..."
+				$html = str_replace('>' . esc_html($from) . '<', '>' . esc_html($to) . '<', $html);
+				$html = str_replace('data-title="' . esc_attr($from) . '"', 'data-title="' . esc_attr($to) . '"', $html);
+
+				// Fallback raw replace (some plugins output plain)
+				$html = str_replace($from, $to, $html);
+			}
+		}
+
+		// Replace labels if they appear inside the html (some swatches render label)
+		if (!empty($labels_map)) {
+			uksort($labels_map, function($a, $b) {
+				return strlen((string) $b) <=> strlen((string) $a);
+			});
+
+			foreach ($labels_map as $from => $to) {
+				if (!is_string($from) || $from === '') continue;
+				if (!is_string($to)) $to = (string) $to;
+
+				$html = str_replace('>' . esc_html($from) . '<', '>' . esc_html($to) . '<', $html);
+				$html = str_replace($from, $to, $html);
+			}
+		}
+
+		return $html;
 	}
 
 	public static function filter_display_attributes($attributes, $product) {
