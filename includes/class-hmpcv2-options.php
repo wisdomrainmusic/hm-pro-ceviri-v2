@@ -19,6 +19,10 @@ final class HMPCv2_Options {
             'prefix_default_lang' => false,
             'cookie_remember' => true,
             'cookie_days' => 30,
+            // Auto-switch visitor language by country (WooCommerce geolocation).
+            // When enabled, first-time visitors (no prefix + no hmpcv2_lang cookie) will be
+            // redirected to a matching language prefix (e.g. RO -> /ro/).
+            'geo_autoswitch' => false,
             // legacy: style used to live here; kept for backwards compat/migration only
             'style' => array(
                 'switcher_z' => 99999,
@@ -109,6 +113,7 @@ final class HMPCv2_Options {
         $clean['prefix_default_lang'] = (bool) $clean['prefix_default_lang'];
         $clean['cookie_remember'] = (bool) $clean['cookie_remember'];
         $clean['cookie_days'] = max(1, absint($clean['cookie_days']));
+        $clean['geo_autoswitch'] = !empty($clean['geo_autoswitch']);
 
         // style is now sourced from dedicated option (stable)
         $clean['style'] = self::get_style();
@@ -135,6 +140,7 @@ final class HMPCv2_Options {
         $clean['prefix_default_lang'] = (bool) $clean['prefix_default_lang'];
         $clean['cookie_remember'] = (bool) $clean['cookie_remember'];
         $clean['cookie_days'] = max(1, absint($clean['cookie_days']));
+        $clean['geo_autoswitch'] = !empty($clean['geo_autoswitch']);
 
         // style
         $style = isset($clean['style']) && is_array($clean['style']) ? $clean['style'] : array();

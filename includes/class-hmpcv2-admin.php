@@ -59,6 +59,14 @@ class HMPCv2_Admin {
             'hmpcv2-settings',
             'hmpcv2_main_section'
         );
+
+        add_settings_field(
+            'hmpcv2_geo_autoswitch',
+            __('Auto-switch language by visitor country', 'hmpcv2'),
+            array(__CLASS__, 'render_geo_autoswitch_field'),
+            'hmpcv2-settings',
+            'hmpcv2_main_section'
+        );
     }
 
     public static function sanitize_options($input) {
@@ -104,6 +112,7 @@ class HMPCv2_Admin {
             'prefix_default_lang' => !empty($input['prefix_default_lang']),
             'cookie_remember' => !empty($input['cookie_remember']),
             'cookie_days' => $cookie_days,
+            'geo_autoswitch' => !empty($input['geo_autoswitch']),
         );
     }
 
@@ -174,6 +183,19 @@ class HMPCv2_Admin {
                 <?php esc_html_e('Cookie duration (days):', 'hmpcv2'); ?>
                 <input type="number" min="1" name="<?php echo esc_attr(HMPCv2_Options::OPT_KEY); ?>[cookie_days]" value="<?php echo esc_attr($options['cookie_days']); ?>" />
             </label>
+        </p>
+        <?php
+    }
+
+    public static function render_geo_autoswitch_field() {
+        $options = HMPCv2_Options::get_all();
+        ?>
+        <label>
+            <input type="checkbox" name="<?php echo esc_attr(HMPCv2_Options::OPT_KEY); ?>[geo_autoswitch]" value="1" <?php checked(!empty($options['geo_autoswitch'])); ?> />
+            <?php esc_html_e('If enabled, first-time visitors are redirected based on their country (WooCommerce geolocation). Example: Romania -> /ro/.', 'hmpcv2'); ?>
+        </label>
+        <p class="description">
+            <?php esc_html_e('Only redirects when there is no language prefix and no existing language cookie yet. After redirect, the normal cookie system keeps the language.', 'hmpcv2'); ?>
         </p>
         <?php
     }

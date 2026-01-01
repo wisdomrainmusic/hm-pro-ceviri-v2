@@ -231,6 +231,10 @@ class HMPCv2_Router {
         add_action('template_redirect', array(__CLASS__, 'disable_canonical_on_prefixed_product'), 0);
         add_action('template_redirect', array(__CLASS__, 'redirect_bare_myaccount_to_lang'), 2);
 
+        // Optional: redirect first-time visitors to a language based on country (WooCommerce geolocation).
+        add_action('init', array(__CLASS__, 'maybe_geo_redirect'), 1);
+        // (Runs before maybe_set_lang_cookie so default cookie doesn't block geo redirect.)
+
         add_action('parse_request', array(__CLASS__, 'parse_request_lang'), 1);
         add_action('template_redirect', array(__CLASS__, 'canonical_redirect_default_prefix'), 1);
 
@@ -253,6 +257,119 @@ class HMPCv2_Router {
         $lang = self::current_lang();
         $lang = HMPCv2_Langs::sanitize_lang_code($lang, HMPCv2_Langs::default_lang());
         HMPCv2_Langs::set_current_language($lang);
+    }
+
+    /**
+     * Auto-switch language by visitor country.
+     *
+     * Runs only for first-time visitors:
+     * - no language prefix in the URL
+     * - no existing hmpcv2_lang cookie
+     * - feature enabled in settings
+     *
+     * WooCommerce must be available (WC_Geolocation).
+     */
+    public static function maybe_geo_redirect() {
+        if (is_admin() || wp_doing_ajax()) return;
+        if (!HMPCv2_Options::get('geo_autoswitch', false)) return;
+
+        // Don't interfere with REST, cron, CLI, etc.
+        if ((defined('REST_REQUEST') && REST_REQUEST) || (defined('DOING_CRON') && DOING_CRON)) return;
+        if (defined('WP_CLI') && WP_CLI) return;
+
+        // Already selected language (cookie) -> no redirect.
+        if (!empty($_COOKIE['hmpcv2_lang'])) return;
+
+        // One-shot guard to prevent repeated redirects when cookies are restricted.
+        if (!empty($_COOKIE['hmpcv2_geo_done'])) return;
+
+        // If URL already has a language prefix, skip.
+        $uri_lang = self::detect_lang_from_request_uri();
+        if (is_string($uri_lang) && $uri_lang !== '') return;
+
+        // WooCommerce geolocation is the most reliable in your setup.
+        if (!class_exists('WC_Geolocation')) return;
+
+        $geo = WC_Geolocation::geolocate_ip('', true, true);
+        $country = '';
+        if (is_array($geo) && !empty($geo['country'])) {
+            $country = strtoupper((string) $geo['country']);
+        }
+        if ($country === '' || $country === 'EU') return;
+
+        $enabled = HMPCv2_Langs::enabled_langs();
+        if (!is_array($enabled) || empty($enabled)) return;
+
+        // Map country -> language code. Filterable for custom setups.
+        $map = apply_filters('hmpcv2_geo_country_map', array(
+            'RO' => 'ro',
+            'DE' => 'de',
+            'FR' => 'fr',
+            'ES' => 'es',
+            'IT' => 'it',
+            'PT' => 'pt',
+            'NL' => 'nl',
+            'PL' => 'pl',
+            'CZ' => 'cs',
+            'SK' => 'sk',
+            'HU' => 'hu',
+            'BG' => 'bg',
+            'GR' => 'el',
+            'SE' => 'sv',
+            'NO' => 'no',
+            'DK' => 'da',
+            'FI' => 'fi',
+            'IS' => 'is',
+            'EE' => 'et',
+            'LV' => 'lv',
+            'LT' => 'lt',
+            'SI' => 'sl',
+            'HR' => 'hr',
+            'RS' => 'sr',
+            'BA' => 'bs',
+            'MK' => 'mk',
+            'AL' => 'sq',
+            'UA' => 'uk',
+            'RU' => 'ru',
+            'BY' => 'be',
+            'IE' => 'ga',
+            'TR' => 'tr',
+            'GE' => 'ka',
+            'AM' => 'hy',
+            'AZ' => 'az',
+            'IR' => 'fa',
+            'CN' => 'zh',
+            'SA' => 'ar',
+            'AE' => 'ar',
+            'EG' => 'ar',
+            'MA' => 'ar',
+        ));
+
+        $target = isset($map[$country]) ? (string) $map[$country] : '';
+        $target = HMPCv2_Langs::sanitize_lang_code($target, '');
+
+        // If no direct mapping exists, don't guess.
+        if ($target === '') return;
+
+        // Redirect only if the target language is enabled and differs from default.
+        if (!in_array($target, $enabled, true)) return;
+
+        // Build current URL and apply target prefix.
+        $req_uri = isset($_SERVER['REQUEST_URI']) ? (string) $_SERVER['REQUEST_URI'] : '/';
+        $req_uri = wp_unslash($req_uri);
+        $current_url = home_url($req_uri);
+        $dest = self::apply_lang_to_url($current_url, $target);
+
+        if (!is_string($dest) || $dest === '' || $dest === $current_url) return;
+
+        // Mark geo redirect as done (1 day) to avoid repeated redirects if cookies are blocked.
+        $cookie_days = 1;
+        $secure = is_ssl();
+        $expires = time() + (DAY_IN_SECONDS * $cookie_days);
+        setcookie('hmpcv2_geo_done', '1', $expires, COOKIEPATH, COOKIE_DOMAIN, $secure, true);
+
+        wp_redirect($dest, 302);
+        exit;
     }
 
     /**
