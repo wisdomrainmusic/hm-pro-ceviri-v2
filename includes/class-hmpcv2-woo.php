@@ -23,6 +23,10 @@ final class HMPCv2_Woo {
                 add_filter('woocommerce_product_get_name', array(__CLASS__, 'filter_wc_product_get_name'), 20, 2);
                 add_filter('woocommerce_product_get_title', array(__CLASS__, 'filter_wc_product_get_name'), 20, 2);
                 add_filter('woocommerce_product_title', array(__CLASS__, 'filter_wc_product_title'), 20, 2);
+		// Cart / Checkout item name + variation meta translation
+		add_filter('woocommerce_cart_item_name', array(__CLASS__, 'filter_cart_item_name'), 20, 3);
+		add_filter('woocommerce_order_item_name', array(__CLASS__, 'filter_order_item_name'), 20, 2);
+		add_filter('woocommerce_get_item_data', array(__CLASS__, 'filter_cart_item_data'), 20, 2);
 		add_filter('woocommerce_get_endpoint_url', array(__CLASS__, 'filter_woocommerce_endpoint_url'), 10, 4);
 		add_filter('woocommerce_get_myaccount_page_permalink', array(__CLASS__, 'filter_myaccount_page_permalink'), 10, 1);
 
@@ -907,6 +911,105 @@ final class HMPCv2_Woo {
         public static function filter_wc_product_title($title, $product) {
                 return self::filter_wc_product_get_name($title, $product);
         }
+
+        /**
+         * Translate cart item product name (Cart / Mini-cart / Checkout order review).
+         * Only affects products (post_type=product) and only when a non-default language is active.
+         */
+        public static function filter_cart_item_name($product_name, $cart_item, $cart_item_key) {
+                if (is_admin()) return $product_name;
+
+                $lang = self::current_lang_non_default();
+                if ($lang === '') return $product_name;
+
+                $product_id = 0;
+                if (is_array($cart_item) && isset($cart_item['product_id'])) {
+                        $product_id = (int) $cart_item['product_id'];
+                } elseif (is_array($cart_item) && isset($cart_item['data']) && is_object($cart_item['data']) && method_exists($cart_item['data'], 'get_id')) {
+                        $product_id = (int) $cart_item['data']->get_id();
+                }
+                if ($product_id <= 0) return $product_name;
+                if (get_post_type($product_id) !== 'product') return $product_name;
+
+                $tr = (string) get_post_meta($product_id, self::k($lang, 'title'), true);
+                $tr = trim($tr);
+                if ($tr === '') return $product_name;
+
+                // Keep the original HTML structure (usually an <a> tag) and only replace the inner text.
+                if (preg_match('/<a\b[^>]*>(.*?)<\/a>/is', $product_name, $m)) {
+                        $inner = $m[1];
+                        $new_inner = esc_html($tr);
+                        return str_replace($inner, $new_inner, $product_name);
+                }
+
+                return esc_html($tr);
+        }
+
+        /**
+         * Translate order item name (Order received page / My account orders / emails).
+         */
+        public static function filter_order_item_name($name, $item) {
+                if (is_admin()) return $name;
+
+                $lang = self::current_lang_non_default();
+                if ($lang === '') return $name;
+
+                $product_id = 0;
+                if (is_object($item) && method_exists($item, 'get_product_id')) {
+                        $product_id = (int) $item->get_product_id();
+                }
+                if ($product_id <= 0) return $name;
+                if (get_post_type($product_id) !== 'product') return $name;
+
+                $tr = (string) get_post_meta($product_id, self::k($lang, 'title'), true);
+                $tr = trim($tr);
+                return $tr !== '' ? $tr : $name;
+        }
+
+        /**
+         * Translate variation meta labels/values shown under cart/checkout item (e.g., Size, Unit).
+         * Uses saved per-product maps: attr_labels / attr_values.
+         */
+        public static function filter_cart_item_data($item_data, $cart_item) {
+                if (is_admin()) return $item_data;
+
+                $lang = self::current_lang_non_default();
+                if ($lang === '') return $item_data;
+
+                if (!is_array($item_data) || empty($item_data)) return $item_data;
+
+                $product_id = 0;
+                if (is_array($cart_item) && isset($cart_item['product_id'])) {
+                        $product_id = (int) $cart_item['product_id'];
+                }
+                if ($product_id <= 0) return $item_data;
+                if (get_post_type($product_id) !== 'product') return $item_data;
+
+                $labels = get_post_meta($product_id, self::k($lang, 'attr_labels'), true);
+                if (!is_array($labels)) $labels = array();
+
+                $values = get_post_meta($product_id, self::k($lang, 'attr_values'), true);
+                if (!is_array($values)) $values = array();
+
+                foreach ($item_data as $i => $row) {
+                        if (!is_array($row)) continue;
+
+                        if (isset($row['key']) && isset($labels[$row['key']])) {
+                                $item_data[$i]['key'] = (string) $labels[$row['key']];
+                        }
+
+                        // Value can be in 'value' and/or 'display'
+                        if (isset($row['value']) && isset($values[$row['value']])) {
+                                $item_data[$i]['value'] = (string) $values[$row['value']];
+                        }
+                        if (isset($row['display']) && isset($values[$row['display']])) {
+                                $item_data[$i]['display'] = (string) $values[$row['display']];
+                        }
+                }
+
+                return $item_data;
+        }
+
 
         public static function filter_woo_core_page_title($title, $post_id) {
                 if (is_admin()) return $title;
