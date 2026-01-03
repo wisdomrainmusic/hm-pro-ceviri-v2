@@ -269,9 +269,10 @@ class HMPCv2_Router {
     /**
      * Auto-switch language by visitor country.
      *
-     * Runs on unprefixed homepage requests when geo_autoswitch is enabled and no manual
-     * language choice is stored. Redirects only when detected country differs from the
-     * last stored country (hmpcv2_geo_country).
+     * Runs only for first-time visitors:
+     * - no language prefix in the URL
+     * - no existing hmpcv2_lang cookie
+     * - feature enabled in settings
      *
      * WooCommerce must be available (WC_Geolocation).
      */
@@ -287,17 +288,15 @@ class HMPCv2_Router {
         // (This runs very early on init; cookie may not be set yet.)
         if (isset($_GET[self::QUERY_VAR_LANG])) return;
 
-        // Respect explicit manual selections
-        if (!empty($_COOKIE['hmpcv2_user_choice'])) return;
+        // Already selected language (cookie) -> no redirect.
+        if (!empty($_COOKIE['hmpcv2_lang'])) return;
+
+        // One-shot guard to prevent repeated redirects when cookies are restricted.
+        if (!empty($_COOKIE['hmpcv2_geo_done'])) return;
 
         // If URL already has a language prefix, skip.
         $uri_lang = self::detect_lang_from_request_uri();
         if (is_string($uri_lang) && $uri_lang !== '') return;
-
-        $req_path = isset($_SERVER['REQUEST_URI']) ? (string) parse_url((string) $_SERVER['REQUEST_URI'], PHP_URL_PATH) : '';
-        $req_trim = trim((string) $req_path, '/');
-        // Only act on root homepage ("/" or empty)
-        if ($req_trim !== '') return;
         // Determine visitor country.
         // 1) Prefer WooCommerce geolocation (visitor IP) - this matches your old working behavior.
         // 2) If WC isn't available or returns empty, fallback to Cloudflare's HTTP_CF_IPCOUNTRY.
@@ -371,10 +370,6 @@ class HMPCv2_Router {
         // Redirect only if the target language is enabled and differs from default.
         if (!in_array($target, $enabled, true)) return;
 
-        // If we've already handled this country, skip redirect
-        $last_country = isset($_COOKIE['hmpcv2_geo_country']) ? strtoupper((string) $_COOKIE['hmpcv2_geo_country']) : '';
-        if ($last_country === $country) return;
-
         // Build current URL and apply target prefix.
         $req_uri = isset($_SERVER['REQUEST_URI']) ? (string) $_SERVER['REQUEST_URI'] : '/';
         $req_uri = wp_unslash($req_uri);
@@ -383,10 +378,11 @@ class HMPCv2_Router {
 
         if (!is_string($dest) || $dest === '' || $dest === $current_url) return;
 
+        // Mark geo redirect as done (1 day) to avoid repeated redirects if cookies are blocked.
         $cookie_days = 1;
         $secure = is_ssl();
         $expires = time() + (DAY_IN_SECONDS * $cookie_days);
-        setcookie('hmpcv2_geo_country', $country, $expires, COOKIEPATH, COOKIE_DOMAIN, $secure, true);
+        setcookie('hmpcv2_geo_done', '1', $expires, COOKIEPATH, COOKIE_DOMAIN, $secure, true);
 
         wp_redirect($dest, 302);
         exit;
@@ -723,39 +719,6 @@ class HMPCv2_Router {
         if ($first && in_array($first, $enabled, true)) return $first;
 
         return '';
-    }
-
-    private static function detect_lang_from_referer() {
-        if (empty($_SERVER['HTTP_REFERER'])) return '';
-
-        $ref_path = wp_parse_url((string) $_SERVER['HTTP_REFERER'], PHP_URL_PATH);
-        if (empty($ref_path)) return '';
-
-        $trim = trim((string) $ref_path, '/');
-        if ($trim === '') return '';
-
-        $parts = explode('/', $trim);
-        $first = strtolower((string) ($parts[0] ?? ''));
-        $enabled = HMPCv2_Langs::enabled_langs();
-
-        if ($first && in_array($first, $enabled, true)) {
-            return $first;
-        }
-
-        return '';
-    }
-
-    private static function set_user_choice_cookie($expire = 0) {
-        if (headers_sent()) return;
-
-        if (!is_int($expire) || $expire <= time()) {
-            $days = (int) HMPCv2_Options::get('cookie_days', 30);
-            $days = $days > 0 ? $days : 30;
-            $expire = time() + ($days * DAY_IN_SECONDS);
-        }
-
-        setcookie('hmpcv2_user_choice', '1', $expire, COOKIEPATH ?: '/', COOKIE_DOMAIN, is_ssl(), true);
-        $_COOKIE['hmpcv2_user_choice'] = '1';
     }
 
     public static function current_lang() {
@@ -1187,23 +1150,18 @@ class HMPCv2_Router {
             return $url;
         }
 
-        $prefix_default = self::prefix_default_lang();
-        $req_prefix_lang = self::detect_lang_from_request_uri();
-        $has_prefix = ($req_prefix_lang !== '');
-
-        // If default language is NOT prefixed and visitor is on bare root, keep home stable.
-        if (!$prefix_default && !$has_prefix) {
-            if (is_string($orig_scheme) && $orig_scheme !== '') {
-                return set_url_scheme(home_url('/'), $orig_scheme);
-            }
-            return home_url('/');
-        }
-
         $in_filter = true;
-        if (!self::is_query_ready()) {
-            $lang = self::detect_lang_early();
+        // If default language is unprefixed, never let cookies or geo state force a prefixed home URL for bare root requests.
+        // This protects the homepage (/) from becoming sticky like /de due to persisted cookies or cached markup.
+        $uri_lang = self::detect_lang_from_request_uri();
+        if ($uri_lang === '' && !self::prefix_default_lang()) {
+            $lang = HMPCv2_Langs::default_lang();
         } else {
-            $lang = $has_prefix ? $req_prefix_lang : self::current_lang();
+            if (!self::is_query_ready()) {
+                $lang = self::detect_lang_early();
+            } else {
+                $lang = self::current_lang();
+            }
         }
         $target = self::build_lang_home_url($lang);
         $in_filter = false;
@@ -1387,30 +1345,9 @@ class HMPCv2_Router {
         $lang = HMPCv2_Langs::get_current_language();
         if (!$lang) return;
 
-        $uri_lang = self::detect_lang_from_request_uri();
-        $referer_lang = self::detect_lang_from_referer();
-        $explicit_switch = isset($_GET[self::QUERY_VAR_LANG]);
-
-        // Explicit manual switch if query var is present or visitor moved between language contexts.
-        if (!$explicit_switch && $referer_lang !== '' && $referer_lang !== $lang) {
-            $explicit_switch = true;
-        }
-        if (!$explicit_switch && $uri_lang !== '' && $referer_lang !== '' && $uri_lang !== $referer_lang) {
-            $explicit_switch = true;
-        }
-
-        $allow_persist = $explicit_switch || $uri_lang !== '' || !empty($_COOKIE['hmpcv2_user_choice']);
-        if (!$allow_persist) {
-            return;
-        }
-
         $days = (int) HMPCv2_Options::get('cookie_days', 30);
         $days = $days > 0 ? $days : 30;
         $expire = time() + ($days * DAY_IN_SECONDS);
-
-        if ($explicit_switch) {
-            self::set_user_choice_cookie($expire);
-        }
 
         $current = isset($_COOKIE['hmpcv2_lang']) ? strtolower((string) $_COOKIE['hmpcv2_lang']) : '';
         if ($current === $lang) return;
