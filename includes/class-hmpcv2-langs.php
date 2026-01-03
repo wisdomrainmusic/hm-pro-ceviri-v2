@@ -149,9 +149,41 @@ class HMPCv2_Langs {
     }
 
     public static function get_current_language() {
-        if (!self::$current_language) {
-            self::$current_language = self::default_lang();
+        // If already set (normal frontend requests), return it.
+        if (self::$current_language) {
+            return self::$current_language;
         }
+
+        // AJAX requests (Woo cart fragments etc.) hit /wp-admin/admin-ajax.php without language prefix.
+        // In that context, infer language from our cookie or the HTTP_REFERER, then fallback to default.
+        if (function_exists('wp_doing_ajax') && wp_doing_ajax()) {
+            // 1) Cookie set by HMPC router when visiting a language-prefixed page.
+            if (!empty($_COOKIE['hmpcv2_lang'])) {
+                $c = sanitize_key((string) $_COOKIE['hmpcv2_lang']);
+                if ($c && self::is_allowed($c) && in_array($c, self::enabled_langs(), true)) {
+                    self::$current_language = $c;
+                    return self::$current_language;
+                }
+            }
+
+            // 2) Referer path: /en/..., /de/...
+            if (!empty($_SERVER['HTTP_REFERER'])) {
+                $ref_path = wp_parse_url($_SERVER['HTTP_REFERER'], PHP_URL_PATH);
+                if (!empty($ref_path) && is_string($ref_path)) {
+                    $segments = array_values(array_filter(explode('/', $ref_path)));
+                    if (!empty($segments[0])) {
+                        $maybe = sanitize_key((string) $segments[0]);
+                        if ($maybe && self::is_allowed($maybe) && in_array($maybe, self::enabled_langs(), true)) {
+                            self::$current_language = $maybe;
+                            return self::$current_language;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Default fallback.
+        self::$current_language = self::default_lang();
         return self::$current_language;
     }
 
