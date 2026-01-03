@@ -19,6 +19,10 @@ final class HMPCv2_Woo {
                 add_filter('woocommerce_get_page_title', array(__CLASS__, 'filter_shop_get_page_title'), 20, 2);
                 add_filter('the_content', array(__CLASS__, 'filter_product_content'), 20);
                 add_filter('woocommerce_short_description', array(__CLASS__, 'filter_product_short_description'), 20);
+                // Ensure translated product titles also appear in loops (shop/category widgets) without affecting global page titles
+                add_filter('woocommerce_product_get_name', array(__CLASS__, 'filter_wc_product_get_name'), 20, 2);
+                add_filter('woocommerce_product_get_title', array(__CLASS__, 'filter_wc_product_get_name'), 20, 2);
+                add_filter('woocommerce_product_title', array(__CLASS__, 'filter_wc_product_title'), 20, 2);
 		add_filter('woocommerce_get_endpoint_url', array(__CLASS__, 'filter_woocommerce_endpoint_url'), 10, 4);
 		add_filter('woocommerce_get_myaccount_page_permalink', array(__CLASS__, 'filter_myaccount_page_permalink'), 10, 1);
 
@@ -822,10 +826,25 @@ final class HMPCv2_Woo {
 	// ---------- Frontend ----------
 	private static function is_frontend_product_context($post_id) {
 		if (is_admin()) return false;
-		if (!function_exists('is_product') || !is_product()) return false;
-		if ((int)get_queried_object_id() !== (int)$post_id) return false;
+
 		$p = get_post($post_id);
-		return ($p && $p->post_type === 'product');
+		if (!$p || $p->post_type !== 'product') return false;
+
+		// Single product page: only translate the main product title
+		if (function_exists('is_product') && is_product()) {
+			return ((int) get_queried_object_id() === (int) $post_id);
+		}
+
+		// Product loops (shop, category, widgets, shortcodes)
+		if (function_exists('in_the_loop') && in_the_loop()) {
+			return true;
+		}
+
+		// Fallback for themes/widgets that call get_the_title($product_id) outside the loop
+		if (function_exists('is_shop') && is_shop()) return true;
+		if (function_exists('is_product_taxonomy') && is_product_taxonomy()) return true;
+
+		return false;
 	}
 
         private static function current_lang_non_default() {
@@ -858,6 +877,35 @@ final class HMPCv2_Woo {
 
                 $tr = (string) get_post_meta($post_id, self::k($lang, 'title'), true);
                 return $tr !== '' ? $tr : $title;
+        }
+
+        /**
+         * Translate product titles in Woo loops (shop/category widgets).
+         * IMPORTANT: We intentionally do NOT reuse is_frontend_product_context() here,
+         * because that helper is designed to limit title translation to single product pages.
+         */
+        public static function filter_wc_product_get_name($name, $product) {
+                if (is_admin()) return $name;
+
+                $lang = self::current_lang_non_default();
+                if ($lang === '') return $name;
+
+                $product_id = 0;
+                if (is_object($product) && method_exists($product, 'get_id')) {
+                        $product_id = (int) $product->get_id();
+                } elseif (is_numeric($product)) {
+                        $product_id = (int) $product;
+                }
+                if ($product_id <= 0) return $name;
+                if (get_post_type($product_id) !== 'product') return $name;
+
+                $tr = (string) get_post_meta($product_id, self::k($lang, 'title'), true);
+                $tr = trim($tr);
+                return $tr !== '' ? $tr : $name;
+        }
+
+        public static function filter_wc_product_title($title, $product) {
+                return self::filter_wc_product_get_name($title, $product);
         }
 
         public static function filter_woo_core_page_title($title, $post_id) {
