@@ -22,7 +22,7 @@ final class HMPCv2_Options {
             // Auto-switch visitor language by country (WooCommerce geolocation).
             // When enabled, first-time visitors (no prefix + no hmpcv2_lang cookie) will be
             // redirected to a matching language prefix (e.g. RO -> /ro/).
-            'geo_autoswitch' => false,
+            'geo_autoswitch' => true,
             // legacy: style used to live here; kept for backwards compat/migration only
             'style' => array(
                 'switcher_z' => 99999,
@@ -43,6 +43,11 @@ final class HMPCv2_Options {
         }
 
         $merged = wp_parse_args($val, self::defaults());
+        // If the site has multiple enabled languages, default geo autoswitch to ON
+        // (common multi-lang setup where visitors should land in their country language).
+        if (empty($merged['geo_autoswitch']) && !empty($merged['enabled_langs']) && is_array($merged['enabled_langs']) && count($merged['enabled_langs']) > 2) {
+            $merged['geo_autoswitch'] = true;
+        }
         update_option(self::OPT_KEY, $merged, false);
 
         // ensure style option exists (and migrate once if needed)

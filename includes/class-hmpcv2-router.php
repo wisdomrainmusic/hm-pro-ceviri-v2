@@ -278,28 +278,44 @@ class HMPCv2_Router {
      */
     public static function maybe_geo_redirect() {
         if (is_admin() || wp_doing_ajax()) return;
+
+        // Feature toggle (stored in hmpcv2_settings). If unset, defaults to ON for multi-lang sites.
         if (!HMPCv2_Options::get('geo_autoswitch', true)) return;
 
         // Don't interfere with REST, cron, CLI, etc.
         if ((defined('REST_REQUEST') && REST_REQUEST) || (defined('DOING_CRON') && DOING_CRON)) return;
         if (defined('WP_CLI') && WP_CLI) return;
 
+        // Only run on the site root (prevents surprising redirects on deep links).
+        $req_uri = isset($_SERVER['REQUEST_URI']) ? (string) $_SERVER['REQUEST_URI'] : '/';
+        $req_uri = wp_unslash($req_uri);
+        $path_only = (string) wp_parse_url($req_uri, PHP_URL_PATH);
+        if ($path_only === '') $path_only = '/';
+        if ($path_only !== '/') return;
+
         // If the request explicitly asks to switch language, do NOT apply geo autoswitch.
-        // (This runs very early on init; cookie may not be set yet.)
         if (isset($_GET[self::QUERY_VAR_LANG])) return;
-
-        // Already selected language (cookie) -> no redirect.
-        if (!empty($_COOKIE['hmpcv2_lang'])) return;
-
-        // One-shot guard to prevent repeated redirects when cookies are restricted.
-        if (!empty($_COOKIE['hmpcv2_geo_done'])) return;
 
         // If URL already has a language prefix, skip.
         $uri_lang = self::detect_lang_from_request_uri();
         if (is_string($uri_lang) && $uri_lang !== '') return;
+
+        // Respect explicit/manual user choice (set by switcher).
+        if (!empty($_COOKIE['hmpcv2_user_choice'])) return;
+
+        // Determine site defaults + enabled languages.
+        $default = HMPCv2_Langs::default_lang();
+        $enabled = HMPCv2_Langs::enabled_langs();
+        if (!is_array($enabled) || empty($enabled)) return;
+
+        // If a cookie exists for a NON-default language, do not override it.
+        // If cookie equals default (common "first visit" scenario when cookie is set early),
+        // allow geo to override once for the root URL.
+        $cookie_lang = isset($_COOKIE['hmpcv2_lang']) ? (string) $_COOKIE['hmpcv2_lang'] : '';
+        $cookie_lang = HMPCv2_Langs::sanitize_lang_code($cookie_lang, '');
+        if ($cookie_lang !== '' && $cookie_lang !== $default) return;
+
         // Determine visitor country.
-        // 1) Prefer WooCommerce geolocation (visitor IP) - this matches your old working behavior.
-        // 2) If WC isn't available or returns empty, fallback to Cloudflare's HTTP_CF_IPCOUNTRY.
         $country = '';
         if (class_exists('WC_Geolocation')) {
             $geo = WC_Geolocation::geolocate_ip('', true, true);
@@ -307,58 +323,25 @@ class HMPCv2_Router {
                 $country = strtoupper((string) $geo['country']);
             }
         }
-
         if ($country === '' && !empty($_SERVER['HTTP_CF_IPCOUNTRY'])) {
             $country = strtoupper(trim((string) $_SERVER['HTTP_CF_IPCOUNTRY']));
         }
         if ($country === '' || $country === 'EU') return;
 
-        $enabled = HMPCv2_Langs::enabled_langs();
-        if (!is_array($enabled) || empty($enabled)) return;
+        // Country one-shot guard (prevents repeated redirects in same country).
+        $prev_country = isset($_COOKIE['hmpcv2_geo_country']) ? strtoupper((string) $_COOKIE['hmpcv2_geo_country']) : '';
+        if ($prev_country !== '' && $prev_country === $country) return;
 
         // Map country -> language code. Filterable for custom setups.
         $map = apply_filters('hmpcv2_geo_country_map', array(
             'RO' => 'ro',
             'DE' => 'de',
             'FR' => 'fr',
-            'ES' => 'es',
-            'IT' => 'it',
-            'PT' => 'pt',
-            'NL' => 'nl',
-            'PL' => 'pl',
-            'CZ' => 'cs',
-            'SK' => 'sk',
-            'HU' => 'hu',
-            'BG' => 'bg',
             'GR' => 'el',
-            'SE' => 'sv',
-            'NO' => 'no',
-            'DK' => 'da',
-            'FI' => 'fi',
-            'IS' => 'is',
-            'EE' => 'et',
-            'LV' => 'lv',
-            'LT' => 'lt',
-            'SI' => 'sl',
-            'HR' => 'hr',
-            'RS' => 'sr',
             'BA' => 'bs',
-            'MK' => 'mk',
-            'AL' => 'sq',
-            'UA' => 'uk',
             'RU' => 'ru',
-            'BY' => 'be',
-            'IE' => 'ga',
-            'TR' => 'tr',
-            'GE' => 'ka',
-            'AM' => 'hy',
             'AZ' => 'az',
-            'IR' => 'fa',
-            'CN' => 'zh',
-            'SA' => 'ar',
-            'AE' => 'ar',
-            'EG' => 'ar',
-            'MA' => 'ar',
+            'TR' => 'tr',
         ));
 
         $target = isset($map[$country]) ? (string) $map[$country] : '';
@@ -367,26 +350,33 @@ class HMPCv2_Router {
         // If no direct mapping exists, don't guess.
         if ($target === '') return;
 
-        // Redirect only if the target language is enabled and differs from default.
+        // Redirect only if the target language is enabled.
         if (!in_array($target, $enabled, true)) return;
 
+        // Do not redirect to the default language (default is unprefixed in your setup).
+        if ($target === $default) {
+            // Still remember country to avoid re-check loops.
+            $secure = is_ssl();
+            setcookie('hmpcv2_geo_country', $country, time() + DAY_IN_SECONDS * 7, COOKIEPATH, COOKIE_DOMAIN, $secure, true);
+            return;
+        }
+
         // Build current URL and apply target prefix.
-        $req_uri = isset($_SERVER['REQUEST_URI']) ? (string) $_SERVER['REQUEST_URI'] : '/';
-        $req_uri = wp_unslash($req_uri);
-        $current_url = home_url($req_uri);
+        $home = (string) get_option('home');
+        if ($home === '') $home = home_url('/');
+        $current_url = rtrim($home, '/') . '/';
         $dest = self::apply_lang_to_url($current_url, $target);
 
         if (!is_string($dest) || $dest === '' || $dest === $current_url) return;
 
-        // Mark geo redirect as done (1 day) to avoid repeated redirects if cookies are blocked.
-        $cookie_days = 1;
+        // Remember country (7 days). If cookies are blocked, redirect may repeat, but this is acceptable.
         $secure = is_ssl();
-        $expires = time() + (DAY_IN_SECONDS * $cookie_days);
-        setcookie('hmpcv2_geo_done', '1', $expires, COOKIEPATH, COOKIE_DOMAIN, $secure, true);
+        setcookie('hmpcv2_geo_country', $country, time() + DAY_IN_SECONDS * 7, COOKIEPATH, COOKIE_DOMAIN, $secure, true);
 
         wp_redirect($dest, 302);
         exit;
     }
+
 
     /**
      * Only touch frontend links, and only for internal URLs.
@@ -1151,17 +1141,10 @@ class HMPCv2_Router {
         }
 
         $in_filter = true;
-        // If default language is unprefixed, never let cookies or geo state force a prefixed home URL for bare root requests.
-        // This protects the homepage (/) from becoming sticky like /de due to persisted cookies or cached markup.
-        $uri_lang = self::detect_lang_from_request_uri();
-        if ($uri_lang === '' && !self::prefix_default_lang()) {
-            $lang = HMPCv2_Langs::default_lang();
+        if (!self::is_query_ready()) {
+            $lang = self::detect_lang_early();
         } else {
-            if (!self::is_query_ready()) {
-                $lang = self::detect_lang_early();
-            } else {
-                $lang = self::current_lang();
-            }
+            $lang = self::current_lang();
         }
         $target = self::build_lang_home_url($lang);
         $in_filter = false;
