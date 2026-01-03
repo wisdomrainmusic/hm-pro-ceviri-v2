@@ -28,18 +28,25 @@ class HMPCv2_Router {
             return $default;
         }
 
-        // 1) Cookie
+        // 1) URL prefix MUST win.
+        $uri_lang = self::detect_lang_from_request_uri();
+        if ($uri_lang !== '' && in_array($uri_lang, $enabled, true)) {
+            return $uri_lang;
+        }
+
+        // If default language is NOT prefixed, any non-prefixed URL should be treated as default.
+        // This prevents a stale cookie (e.g. 'en') from blocking a switch back to TR.
+        // (When prefix_default_lang=true, default may be prefixed and this rule should not apply.)
+        if (!HMPCv2_Options::get('prefix_default_lang', false)) {
+            return $default;
+        }
+
+        // 2) Cookie fallback (only when default language is prefixed)
         if (!empty($_COOKIE['hmpcv2_lang'])) {
             $cookie_lang = HMPCv2_Langs::sanitize_lang_code((string) $_COOKIE['hmpcv2_lang'], '');
             if ($cookie_lang !== '' && in_array($cookie_lang, $enabled, true)) {
                 return $cookie_lang;
             }
-        }
-
-        // 2) URL prefix
-        $uri_lang = self::detect_lang_from_request_uri();
-        if ($uri_lang !== '' && in_array($uri_lang, $enabled, true)) {
-            return $uri_lang;
         }
 
         return $default;
@@ -271,11 +278,15 @@ class HMPCv2_Router {
      */
     public static function maybe_geo_redirect() {
         if (is_admin() || wp_doing_ajax()) return;
-        if (!HMPCv2_Options::get('geo_autoswitch', false)) return;
+        if (!HMPCv2_Options::get('geo_autoswitch', true)) return;
 
         // Don't interfere with REST, cron, CLI, etc.
         if ((defined('REST_REQUEST') && REST_REQUEST) || (defined('DOING_CRON') && DOING_CRON)) return;
         if (defined('WP_CLI') && WP_CLI) return;
+
+        // If the request explicitly asks to switch language, do NOT apply geo autoswitch.
+        // (This runs very early on init; cookie may not be set yet.)
+        if (isset($_GET[self::QUERY_VAR_LANG])) return;
 
         // Already selected language (cookie) -> no redirect.
         if (!empty($_COOKIE['hmpcv2_lang'])) return;
@@ -286,14 +297,19 @@ class HMPCv2_Router {
         // If URL already has a language prefix, skip.
         $uri_lang = self::detect_lang_from_request_uri();
         if (is_string($uri_lang) && $uri_lang !== '') return;
-
-        // WooCommerce geolocation is the most reliable in your setup.
-        if (!class_exists('WC_Geolocation')) return;
-
-        $geo = WC_Geolocation::geolocate_ip('', true, true);
+        // Determine visitor country.
+        // 1) Prefer WooCommerce geolocation (visitor IP) - this matches your old working behavior.
+        // 2) If WC isn't available or returns empty, fallback to Cloudflare's HTTP_CF_IPCOUNTRY.
         $country = '';
-        if (is_array($geo) && !empty($geo['country'])) {
-            $country = strtoupper((string) $geo['country']);
+        if (class_exists('WC_Geolocation')) {
+            $geo = WC_Geolocation::geolocate_ip('', true, true);
+            if (is_array($geo) && !empty($geo['country'])) {
+                $country = strtoupper((string) $geo['country']);
+            }
+        }
+
+        if ($country === '' && !empty($_SERVER['HTTP_CF_IPCOUNTRY'])) {
+            $country = strtoupper(trim((string) $_SERVER['HTTP_CF_IPCOUNTRY']));
         }
         if ($country === '' || $country === 'EU') return;
 
@@ -713,6 +729,13 @@ class HMPCv2_Router {
         $uri_lang = self::detect_lang_from_request_uri();
         if ($uri_lang !== '' && in_array($uri_lang, $enabled, true)) {
             return $uri_lang;
+        }
+
+        // If the URL has NO prefix and default language is NOT prefixed,
+        // we must treat the request as default language regardless of cookie.
+        // This is the key to allowing users to return to TR.
+        if ($uri_lang === '' && !HMPCv2_Options::get('prefix_default_lang', false)) {
+            return $default;
         }
 
         if (!self::is_query_ready()) {
