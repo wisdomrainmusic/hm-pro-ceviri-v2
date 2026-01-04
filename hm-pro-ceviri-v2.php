@@ -2,13 +2,42 @@
 /**
  * Plugin Name: HM Pro Çeviri v2 (Manual Multi-Language)
  * Description: Wix-style manual multi-language framework (URL-based language prefix + admin settings + language switcher). No auto-translate.
- * Version: 2.0.0
+ * Version: 2.0.1
  * Author: HM
  */
 
 if (!defined('ABSPATH')) exit;
 
-define('HMPCV2_VERSION', '2.0.0');
+/**
+ * Admin capability helpers.
+ *
+ * This plugin is used on WooCommerce sites where Shop Manager should be able
+ * to access HMPC admin pages. We therefore use the Woo capability for menus,
+ * while keeping Administrator compatibility even if Woo caps are not present.
+ */
+if (!function_exists('hmpcv2_admin_cap')) {
+    function hmpcv2_admin_cap(): string {
+        return 'manage_woocommerce';
+    }
+}
+
+if (!function_exists('hmpcv2_user_can_manage')) {
+    function hmpcv2_user_can_manage(): bool {
+        return current_user_can('manage_options') || current_user_can(hmpcv2_admin_cap());
+    }
+}
+
+// Ensure administrators always pass the HMPC capability check.
+add_filter('user_has_cap', function($allcaps, $caps, $args, $user) {
+    if (empty($caps) || !is_array($caps)) return $allcaps;
+    $requested = (string) $caps[0];
+    if ($requested === hmpcv2_admin_cap() && user_can($user, 'manage_options')) {
+        $allcaps[hmpcv2_admin_cap()] = true;
+    }
+    return $allcaps;
+}, 10, 4);
+
+define('HMPCV2_VERSION', '2.0.1');
 define('HMPCV2_PATH', plugin_dir_path(__FILE__));
 define('HMPCV2_URL', plugin_dir_url(__FILE__));
 if (!defined('HMPC_DEBUG')) {
@@ -32,6 +61,7 @@ require_once HMPCV2_PATH . 'includes/class-hmpcv2-admin-translations.php';
 require_once HMPCV2_PATH . 'includes/class-hmpcv2-switcher.php';
 require_once HMPCV2_PATH . 'includes/class-hmpcv2-woo.php';
 require_once HMPCV2_PATH . 'includes/class-hmpcv2-email-verification.php';
+require_once HMPCV2_PATH . 'includes/class-hmpcv2-language-importer.php';
 
 final class HMPCv2_Plugin {
     private static $instance = null;
@@ -57,6 +87,7 @@ final class HMPCv2_Plugin {
         HMPCv2_Term_Translations::init();
         HMPC_Menu_Translator::init();
         HMPCv2_Email_Verification::init();
+        HMPCv2_Language_Importer::init();
 
         if (!is_admin()) {
             add_filter('redirect_canonical', function($redirect_url, $requested_url) {

@@ -5369,7 +5369,7 @@ final class HMPCv2_Admin_Translations {
             'options-general.php',
             'HMPC v2 Translations',
             'HMPC v2 Translations',
-            'manage_options',
+            function_exists('hmpcv2_admin_cap') ? hmpcv2_admin_cap() : 'manage_options',
             'hmpcv2-translations',
             array(__CLASS__, 'render_page')
         );
@@ -5657,7 +5657,7 @@ final class HMPCv2_Admin_Translations {
 
     public static function ajax_woo_dict_list() {
         check_ajax_referer('hmpcv2_admin_nonce', 'nonce');
-        if (!current_user_can('manage_options')) wp_send_json_error(array('message' => 'forbidden'), 403);
+        if (!hmpcv2_user_can_manage()) wp_send_json_error(array('message' => 'forbidden'), 403);
 
         $lang = isset($_POST['lang']) ? self::hmpcv2_sanitize_lang_code((string) $_POST['lang'], '') : '';
         $domain = isset($_POST['domain']) ? sanitize_text_field((string) $_POST['domain']) : '';
@@ -5724,7 +5724,7 @@ final class HMPCv2_Admin_Translations {
 
     public static function ajax_woo_dict_save() {
         check_ajax_referer('hmpcv2_admin_nonce', 'nonce');
-        if (!current_user_can('manage_options')) wp_send_json_error(array('message' => 'forbidden'), 403);
+        if (!hmpcv2_user_can_manage()) wp_send_json_error(array('message' => 'forbidden'), 403);
 
         $lang = isset($_POST['lang']) ? self::hmpcv2_sanitize_lang_code((string) $_POST['lang'], '') : '';
         $domain = isset($_POST['domain']) ? sanitize_text_field((string) $_POST['domain']) : '';
@@ -5798,7 +5798,7 @@ final class HMPCv2_Admin_Translations {
 
     public static function ajax_woo_dict_delete() {
         check_ajax_referer('hmpcv2_admin_nonce', 'nonce');
-        if (!current_user_can('manage_options')) wp_send_json_error(array('message' => 'forbidden'), 403);
+        if (!hmpcv2_user_can_manage()) wp_send_json_error(array('message' => 'forbidden'), 403);
 
         $lang = isset($_POST['lang']) ? self::hmpcv2_sanitize_lang_code((string) $_POST['lang'], '') : '';
         $domain = isset($_POST['domain']) ? sanitize_text_field((string) $_POST['domain']) : '';
@@ -5841,7 +5841,7 @@ final class HMPCv2_Admin_Translations {
 
     public static function ajax_woo_seed_presets() {
         check_ajax_referer('hmpcv2_admin_nonce', 'nonce');
-        if (!current_user_can('manage_options')) wp_send_json_error(array('message' => 'forbidden'), 403);
+        if (!hmpcv2_user_can_manage()) wp_send_json_error(array('message' => 'forbidden'), 403);
 
         $lang = isset($_POST['lang']) ? self::hmpcv2_sanitize_lang_code((string) $_POST['lang'], '') : '';
         $preset = isset($_POST['preset']) ? sanitize_text_field((string) $_POST['preset']) : '';
@@ -5948,7 +5948,7 @@ final class HMPCv2_Admin_Translations {
     }
 
     public static function ajax_search_content() {
-        if (!current_user_can('manage_options')) wp_send_json_error(array('message' => 'forbidden'), 403);
+        if (!hmpcv2_user_can_manage()) wp_send_json_error(array('message' => 'forbidden'), 403);
 
         $nonce = isset($_POST['nonce']) ? (string)$_POST['nonce'] : '';
         if (!wp_verify_nonce($nonce, 'hmpcv2_admin_nonce')) wp_send_json_error(array('message' => 'bad_nonce'), 400);
@@ -6038,7 +6038,7 @@ final class HMPCv2_Admin_Translations {
     }
 
     public static function ajax_list_pages() {
-        if (!current_user_can('manage_options')) wp_send_json_error(array('message' => 'forbidden'), 403);
+        if (!hmpcv2_user_can_manage()) wp_send_json_error(array('message' => 'forbidden'), 403);
 
         $nonce = isset($_POST['nonce']) ? (string)$_POST['nonce'] : '';
         if (!wp_verify_nonce($nonce, 'hmpcv2_admin_nonce')) wp_send_json_error(array('message' => 'bad_nonce'), 400);
@@ -6177,7 +6177,7 @@ final class HMPCv2_Admin_Translations {
     }
 
     public static function ajax_create_group() {
-        if (!current_user_can('manage_options')) wp_send_json_error(array('message' => 'forbidden'), 403);
+        if (!hmpcv2_user_can_manage()) wp_send_json_error(array('message' => 'forbidden'), 403);
 
         $nonce = isset($_POST['nonce']) ? (string)$_POST['nonce'] : '';
         if (!wp_verify_nonce($nonce, 'hmpcv2_admin_nonce')) wp_send_json_error(array('message' => 'bad_nonce'), 400);
@@ -6207,7 +6207,7 @@ final class HMPCv2_Admin_Translations {
     }
 
     public static function ajax_search_terms() {
-        if (!current_user_can('manage_options')) wp_send_json_error(array('message' => 'forbidden'), 403);
+        if (!hmpcv2_user_can_manage()) wp_send_json_error(array('message' => 'forbidden'), 403);
 
         $nonce = isset($_POST['nonce']) ? (string)$_POST['nonce'] : '';
         if (!wp_verify_nonce($nonce, 'hmpcv2_admin_nonce')) wp_send_json_error(array('message' => 'bad_nonce'), 400);
@@ -6257,7 +6257,7 @@ final class HMPCv2_Admin_Translations {
     }
 
     public static function ajax_save_term_translation() {
-        if (!current_user_can('manage_options')) wp_send_json_error(array('message' => 'forbidden'), 403);
+        if (!hmpcv2_user_can_manage()) wp_send_json_error(array('message' => 'forbidden'), 403);
 
         $nonce = isset($_POST['nonce']) ? (string)$_POST['nonce'] : '';
         if (!wp_verify_nonce($nonce, 'hmpcv2_admin_nonce')) wp_send_json_error(array('message' => 'bad_nonce'), 400);
@@ -6283,7 +6283,7 @@ final class HMPCv2_Admin_Translations {
     }
 
     private static function must_admin() {
-        if (!current_user_can('manage_options')) wp_send_json_error(array('message' => 'forbidden'), 403);
+        if (!hmpcv2_user_can_manage()) wp_send_json_error(array('message' => 'forbidden'), 403);
         $nonce = isset($_POST['nonce']) ? (string)$_POST['nonce'] : '';
         if (!wp_verify_nonce($nonce, 'hmpcv2_admin_nonce')) wp_send_json_error(array('message' => 'bad_nonce'), 400);
     }
@@ -6393,7 +6393,7 @@ final class HMPCv2_Admin_Translations {
     }
 
     public static function render_page() {
-        if (!current_user_can('manage_options')) return;
+        if (!hmpcv2_user_can_manage()) return;
 
         $enabled = HMPCv2_Langs::enabled_langs();
         $default = HMPCv2_Langs::default_lang();

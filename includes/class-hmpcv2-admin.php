@@ -12,7 +12,7 @@ class HMPCv2_Admin {
         add_options_page(
             __('HM Pro Çeviri', 'hmpcv2'),
             __('HM Pro Çeviri', 'hmpcv2'),
-            'manage_options',
+            function_exists('hmpcv2_admin_cap') ? hmpcv2_admin_cap() : 'manage_options',
             'hmpcv2-settings',
             array(__CLASS__, 'render_settings_page')
         );
