@@ -5251,6 +5251,17 @@ class HMPCv2_Woo_Presets {
                     'privacy_policy_text' => 'Your personal data will be used to process your order, support your experience throughout this website, and for other purposes described in our [privacy_policy].',
                 ),
             ),
+
+            // Email verification notice (used by [hm_email_verification_notice])
+            'email_verify_misc' => array(
+                'label'  => 'Email Verification – Notice',
+                'group'  => 'misc',
+                'bucket' => 'email_verification',
+                'strings' => array(
+                    'email_verify_notice' => 'Email verification is required to activate your account. Click the link sent to your inbox.',
+                    'email_verify_button' => 'Resend verification email',
+                ),
+            ),
 			'checkout_fields' => array(
 				'label' => 'Checkout – Fields (Labels)',
 				'domains' => array(
@@ -5567,6 +5578,15 @@ final class HMPCv2_Admin_Translations {
         );
     }
 
+    /**
+     * Map special "misc" domains to their bucket inside hmpcv2_misc_dict.
+     */
+    private static function hmpcv2_misc_bucket_for_domain(string $domain): string {
+        if ($domain === 'checkout_misc') return 'checkout';
+        if ($domain === 'email_verify_misc') return 'email_verification';
+        return '';
+    }
+
     private static function hmpcv2_sanitize_lang_code(string $lang, string $fallback = ''): string {
         if (class_exists('HMPCv2_Langs') && method_exists('HMPCv2_Langs', 'sanitize_lang_code')) {
             return HMPCv2_Langs::sanitize_lang_code($lang, $fallback);
@@ -5649,10 +5669,11 @@ final class HMPCv2_Admin_Translations {
 
         $q = trim($q);
         $limit = 200;
-        if ($domain === 'checkout_misc') {
+        $misc_bucket = self::hmpcv2_misc_bucket_for_domain($domain);
+        if ($misc_bucket !== '') {
             $misc = get_option('hmpcv2_misc_dict', array());
             $misc = is_array($misc) ? $misc : array();
-            $entries = isset($misc[$lang]['checkout']) && is_array($misc[$lang]['checkout']) ? $misc[$lang]['checkout'] : array();
+            $entries = isset($misc[$lang][$misc_bucket]) && is_array($misc[$lang][$misc_bucket]) ? $misc[$lang][$misc_bucket] : array();
 
             foreach ($entries as $key => $translation) {
                 if (count($list) >= $limit) break;
@@ -5728,24 +5749,25 @@ final class HMPCv2_Admin_Translations {
             wp_send_json_error(array('message' => 'bad_input'), 400);
         }
 
-        if ($domain === 'checkout_misc') {
+        $misc_bucket = self::hmpcv2_misc_bucket_for_domain($domain);
+        if ($misc_bucket !== '') {
             $misc = get_option('hmpcv2_misc_dict', array());
             $misc = is_array($misc) ? $misc : array();
 
             if (!isset($misc[$lang]) || !is_array($misc[$lang])) $misc[$lang] = array();
-            if (!isset($misc[$lang]['checkout']) || !is_array($misc[$lang]['checkout'])) $misc[$lang]['checkout'] = array();
+            if (!isset($misc[$lang][$misc_bucket]) || !is_array($misc[$lang][$misc_bucket])) $misc[$lang][$misc_bucket] = array();
 
             if (trim($translation) === '') {
-                if (isset($misc[$lang]['checkout'][$original])) {
-                    unset($misc[$lang]['checkout'][$original]);
-                    if (empty($misc[$lang]['checkout'])) unset($misc[$lang]['checkout']);
+                if (isset($misc[$lang][$misc_bucket][$original])) {
+                    unset($misc[$lang][$misc_bucket][$original]);
+                    if (empty($misc[$lang][$misc_bucket])) unset($misc[$lang][$misc_bucket]);
                     if (empty($misc[$lang])) unset($misc[$lang]);
                     update_option('hmpcv2_misc_dict', $misc, false);
                 }
                 wp_send_json_success(array('saved' => true, 'deleted' => true));
             }
 
-            $misc[$lang]['checkout'][$original] = $translation;
+            $misc[$lang][$misc_bucket][$original] = $translation;
             update_option('hmpcv2_misc_dict', $misc, false);
             wp_send_json_success(array('saved' => true));
         }
@@ -5787,13 +5809,14 @@ final class HMPCv2_Admin_Translations {
             wp_send_json_error(array('message' => 'bad_input'), 400);
         }
 
-        if ($domain === 'checkout_misc') {
+        $misc_bucket = self::hmpcv2_misc_bucket_for_domain($domain);
+        if ($misc_bucket !== '') {
             $misc = get_option('hmpcv2_misc_dict', array());
             $misc = is_array($misc) ? $misc : array();
 
-            if (isset($misc[$lang]['checkout'][$original])) {
-                unset($misc[$lang]['checkout'][$original]);
-                if (empty($misc[$lang]['checkout'])) unset($misc[$lang]['checkout']);
+            if (isset($misc[$lang][$misc_bucket][$original])) {
+                unset($misc[$lang][$misc_bucket][$original]);
+                if (empty($misc[$lang][$misc_bucket])) unset($misc[$lang][$misc_bucket]);
                 if (empty($misc[$lang])) unset($misc[$lang]);
                 update_option('hmpcv2_misc_dict', $misc, false);
             }
@@ -5845,15 +5868,18 @@ final class HMPCv2_Admin_Translations {
             $misc = get_option('hmpcv2_misc_dict', array());
             if (!is_array($misc)) $misc = array();
 
+            $bucket = isset($set['bucket']) ? sanitize_key((string) $set['bucket']) : 'checkout';
+            if ($bucket === '') $bucket = 'checkout';
+
             $added_total = 0;
             foreach ($langs_to_seed as $L) {
                 if (!isset($misc[$L]) || !is_array($misc[$L])) $misc[$L] = array();
-                if (!isset($misc[$L]['checkout']) || !is_array($misc[$L]['checkout'])) $misc[$L]['checkout'] = array();
+                if (!isset($misc[$L][$bucket]) || !is_array($misc[$L][$bucket])) $misc[$L][$bucket] = array();
 
                 foreach ((array) $set['strings'] as $k => $v_en) {
-                    if (!isset($misc[$L]['checkout'][$k]) || $misc[$L]['checkout'][$k] === '') {
+                    if (!isset($misc[$L][$bucket][$k]) || $misc[$L][$bucket][$k] === '') {
                         // Seed EN master as placeholder for all languages; translate later in UI.
-                        $misc[$L]['checkout'][$k] = (string) $v_en;
+                        $misc[$L][$bucket][$k] = (string) $v_en;
                         $added_total++;
                     }
                 }
@@ -6463,6 +6489,7 @@ final class HMPCv2_Admin_Translations {
         echo '<option value="cartflows">cartflows</option>';
         echo '<option value="cartflows-pro">cartflows-pro</option>';
         echo '<option value="checkout_misc">Checkout – Misc (Gateway + Privacy)</option>';
+        echo '<option value="email_verify_misc">Email Verification – Notice</option>';
         echo '<option value="checkout_fields">Checkout – Fields (Labels)</option>';
         echo '<option value="cart_shipping">Cart – Shipping (Labels)</option>';
         echo '<option value="widgets_titles">Widgets – Titles</option>';

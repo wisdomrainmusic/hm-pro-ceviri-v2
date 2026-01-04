@@ -236,7 +236,14 @@ class HMPCv2_Router {
         // SAFETY NET: if /<lang>/urun/<slug> falls into 404, rescue it.
         add_action('template_redirect', array(__CLASS__, 'rescue_404_prefixed_product'), 0);
         add_action('template_redirect', array(__CLASS__, 'disable_canonical_on_prefixed_product'), 0);
-        add_action('template_redirect', array(__CLASS__, 'redirect_bare_myaccount_to_lang'), 2);
+                add_action('template_redirect', array(__CLASS__, 'clean_hmpc_noredirect_param'), 1);
+add_action('template_redirect', array(__CLASS__, 'redirect_bare_myaccount_to_lang'), 2);
+        // Safety-net for themes that hardcode "/cart/" or "/checkout/" without language prefix.
+        add_action('template_redirect', array(__CLASS__, 'redirect_bare_cart_to_lang'), 2);
+        add_action('template_redirect', array(__CLASS__, 'redirect_bare_checkout_to_lang'), 2);
+        // Safety-net for hardcoded "/email-verification/" redirects (signup flows, custom snippets)
+        // to keep the visitor inside the intended language prefix.
+        add_action('template_redirect', array(__CLASS__, 'redirect_bare_email_verification_to_lang'), 2);
 
         // Optional: redirect first-time visitors to a language based on country (WooCommerce geolocation).
         add_action('init', array(__CLASS__, 'maybe_geo_redirect'), 1);
@@ -1344,7 +1351,28 @@ class HMPCv2_Router {
      * If user is browsing /{lang}/... and clicks account icon, redirect bare my-account
      * to /{lang}/my-account/.
      */
-    public static function redirect_bare_myaccount_to_lang() {
+    
+    public static function clean_hmpc_noredirect_param() {
+        if (is_admin() || wp_doing_ajax()) return;
+
+        if (!isset($_GET['hmpc_noredirect']) || (string) $_GET['hmpc_noredirect'] !== '1') {
+            return;
+        }
+
+        // Remove only the loop-prevention flag from the current URL, keep other query args intact.
+        $clean = remove_query_arg('hmpc_noredirect');
+        if (!$clean) return;
+
+        // Safety: avoid redirect loops if remove_query_arg fails.
+        if (strpos($clean, 'hmpc_noredirect=1') !== false) {
+            return;
+        }
+
+        wp_safe_redirect($clean, 302);
+        exit;
+    }
+
+public static function redirect_bare_myaccount_to_lang() {
         if (is_admin() || wp_doing_ajax()) return;
         if (!function_exists('is_account_page') || !is_account_page()) return;
 
@@ -1398,6 +1426,200 @@ class HMPCv2_Router {
         $target = self::apply_lang_to_url(home_url($path), $lang);
         if (!$target) return;
 
+        $target = add_query_arg('hmpc_noredirect', '1', $target);
+
+        wp_safe_redirect($target, 302);
+        exit;
+    }
+
+    /**
+     * Safety-net for signup flows that redirect to a bare "/email-verification/" URL
+     * without the language prefix. When default language is not prefixed, our early
+     * detection treats non-prefixed URLs as default (TR) to avoid stale cookie issues.
+     *
+     * This handler only targets the email verification page and redirects it into
+     * /{lang}/email-verification/ based on (1) referer prefix, then (2) lang cookie.
+     *
+     * It is intentionally narrow to avoid changing global redirect behavior.
+     */
+    public static function redirect_bare_email_verification_to_lang() {
+        if (is_admin() || wp_doing_ajax()) return;
+
+        if (isset($_GET['hmpc_noredirect']) && (string) $_GET['hmpc_noredirect'] === '1') {
+            return;
+        }
+
+        $uri  = isset($_SERVER['REQUEST_URI']) ? (string) $_SERVER['REQUEST_URI'] : '';
+        $path = $uri ? (string) parse_url($uri, PHP_URL_PATH) : '';
+        if ($path === '') return;
+
+        $clean = '/' . trim($path, '/') . '/';
+        if ($clean !== '/email-verification/' && $clean !== '/email_verification/') {
+            return;
+        }
+
+        // If already language-prefixed, do nothing.
+        $trim = trim($path, '/');
+        $first = $trim === '' ? '' : strtolower(strtok($trim, '/'));
+        $enabled = HMPCv2_Langs::enabled_langs();
+        if ($first && in_array($first, $enabled, true)) {
+            return;
+        }
+
+        // Determine intended language from referer (best signal) then cookie.
+        $lang = '';
+        $ref = isset($_SERVER['HTTP_REFERER']) ? (string) $_SERVER['HTTP_REFERER'] : '';
+        $ref_path = $ref ? (string) parse_url($ref, PHP_URL_PATH) : '';
+        $ref_trim = $ref_path ? trim($ref_path, '/') : '';
+        $ref_first = $ref_trim === '' ? '' : strtolower(strtok($ref_trim, '/'));
+
+        if ($ref_first && in_array($ref_first, $enabled, true)) {
+            $lang = $ref_first;
+        } elseif (!empty($_COOKIE['hmpcv2_lang'])) {
+            $cookie_lang = HMPCv2_Langs::sanitize_lang_code((string) $_COOKIE['hmpcv2_lang'], '');
+            if ($cookie_lang !== '' && in_array($cookie_lang, $enabled, true)) {
+                $lang = $cookie_lang;
+            }
+        }
+
+        if ($lang === '') {
+            return;
+        }
+
+        $default = HMPCv2_Langs::default_lang();
+        if ($lang === $default && !self::prefix_default_lang()) {
+            return;
+        }
+
+        // Build target from full current URL (preserve query string)
+        $scheme = is_ssl() ? 'https' : 'http';
+        $host = isset($_SERVER['HTTP_HOST']) ? (string) $_SERVER['HTTP_HOST'] : '';
+        $req  = isset($_SERVER['REQUEST_URI']) ? (string) $_SERVER['REQUEST_URI'] : '';
+        if ($host === '' || $req === '') return;
+
+        $full = $scheme . '://' . $host . $req;
+        $target = self::apply_lang_to_url($full, $lang);
+        if (!$target) return;
+
+        $target = add_query_arg('hmpc_noredirect', '1', $target);
+
+        wp_safe_redirect($target, 302);
+        exit;
+    }
+
+    /**
+     * Safety-net for themes that hardcode a bare "/cart/" URL (no /{lang}/ prefix).
+     *
+     * When default language is not prefixed, our early detection intentionally treats
+     * non-prefixed URLs as default to avoid stale cookies preventing a switch back to TR.
+     *
+     * For Woo core pages (Cart/Checkout), a hardcoded link should keep the visitor
+     * inside their current browsing language, so we redirect bare URLs to /{lang}/.../.
+     */
+    public static function redirect_bare_cart_to_lang() {
+        if (is_admin() || wp_doing_ajax()) return;
+        if (!function_exists('is_cart') || !is_cart()) return;
+
+        if (isset($_GET['hmpc_noredirect']) && (string) $_GET['hmpc_noredirect'] === '1') {
+            return;
+        }
+
+        $uri  = isset($_SERVER['REQUEST_URI']) ? (string) $_SERVER['REQUEST_URI'] : '';
+        $path = $uri ? (string) parse_url($uri, PHP_URL_PATH) : '';
+        if ($path === '') return;
+
+        // If already language-prefixed, do nothing.
+        $trim = trim($path, '/');
+        $first = $trim === '' ? '' : strtolower(strtok($trim, '/'));
+        $enabled = HMPCv2_Langs::enabled_langs();
+        if ($first && in_array($first, $enabled, true)) {
+            return;
+        }
+
+        // Determine intended language from referer (best signal), then cookie.
+        $lang = '';
+        $ref = isset($_SERVER['HTTP_REFERER']) ? (string) $_SERVER['HTTP_REFERER'] : '';
+        $ref_path = $ref ? (string) parse_url($ref, PHP_URL_PATH) : '';
+        $ref_trim = $ref_path ? trim($ref_path, '/') : '';
+        $ref_first = $ref_trim === '' ? '' : strtolower(strtok($ref_trim, '/'));
+
+        if ($ref_first && in_array($ref_first, $enabled, true)) {
+            $lang = $ref_first;
+        } elseif (!empty($_COOKIE['hmpcv2_lang'])) {
+            $cookie_lang = HMPCv2_Langs::sanitize_lang_code((string) $_COOKIE['hmpcv2_lang'], '');
+            if ($cookie_lang !== '' && in_array($cookie_lang, $enabled, true)) {
+                $lang = $cookie_lang;
+            }
+        }
+
+        if ($lang === '') {
+            return;
+        }
+
+        $default = HMPCv2_Langs::default_lang();
+        if ($lang === $default && !self::prefix_default_lang()) {
+            return;
+        }
+
+        $target = self::apply_lang_to_url(home_url($path), $lang);
+        if (!$target) return;
+        $target = add_query_arg('hmpc_noredirect', '1', $target);
+
+        wp_safe_redirect($target, 302);
+        exit;
+    }
+
+    /**
+     * Safety-net for themes that hardcode a bare "/checkout/" URL (no /{lang}/ prefix).
+     * See redirect_bare_cart_to_lang() for rationale.
+     */
+    public static function redirect_bare_checkout_to_lang() {
+        if (is_admin() || wp_doing_ajax()) return;
+        if (!function_exists('is_checkout') || !is_checkout()) return;
+
+        if (isset($_GET['hmpc_noredirect']) && (string) $_GET['hmpc_noredirect'] === '1') {
+            return;
+        }
+
+        $uri  = isset($_SERVER['REQUEST_URI']) ? (string) $_SERVER['REQUEST_URI'] : '';
+        $path = $uri ? (string) parse_url($uri, PHP_URL_PATH) : '';
+        if ($path === '') return;
+
+        // If already language-prefixed, do nothing.
+        $trim = trim($path, '/');
+        $first = $trim === '' ? '' : strtolower(strtok($trim, '/'));
+        $enabled = HMPCv2_Langs::enabled_langs();
+        if ($first && in_array($first, $enabled, true)) {
+            return;
+        }
+
+        // Determine intended language from referer (best signal), then cookie.
+        $lang = '';
+        $ref = isset($_SERVER['HTTP_REFERER']) ? (string) $_SERVER['HTTP_REFERER'] : '';
+        $ref_path = $ref ? (string) parse_url($ref, PHP_URL_PATH) : '';
+        $ref_trim = $ref_path ? trim($ref_path, '/') : '';
+        $ref_first = $ref_trim === '' ? '' : strtolower(strtok($ref_trim, '/'));
+
+        if ($ref_first && in_array($ref_first, $enabled, true)) {
+            $lang = $ref_first;
+        } elseif (!empty($_COOKIE['hmpcv2_lang'])) {
+            $cookie_lang = HMPCv2_Langs::sanitize_lang_code((string) $_COOKIE['hmpcv2_lang'], '');
+            if ($cookie_lang !== '' && in_array($cookie_lang, $enabled, true)) {
+                $lang = $cookie_lang;
+            }
+        }
+
+        if ($lang === '') {
+            return;
+        }
+
+        $default = HMPCv2_Langs::default_lang();
+        if ($lang === $default && !self::prefix_default_lang()) {
+            return;
+        }
+
+        $target = self::apply_lang_to_url(home_url($path), $lang);
+        if (!$target) return;
         $target = add_query_arg('hmpc_noredirect', '1', $target);
 
         wp_safe_redirect($target, 302);

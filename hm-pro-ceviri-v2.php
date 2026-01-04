@@ -31,6 +31,7 @@ require_once HMPCV2_PATH . 'includes/class-hmpcv2-admin.php';
 require_once HMPCV2_PATH . 'includes/class-hmpcv2-admin-translations.php';
 require_once HMPCV2_PATH . 'includes/class-hmpcv2-switcher.php';
 require_once HMPCV2_PATH . 'includes/class-hmpcv2-woo.php';
+require_once HMPCV2_PATH . 'includes/class-hmpcv2-email-verification.php';
 
 final class HMPCv2_Plugin {
     private static $instance = null;
@@ -55,6 +56,7 @@ final class HMPCv2_Plugin {
         HMPCv2_Switcher::init();
         HMPCv2_Term_Translations::init();
         HMPC_Menu_Translator::init();
+        HMPCv2_Email_Verification::init();
 
         if (!is_admin()) {
             add_filter('redirect_canonical', function($redirect_url, $requested_url) {
